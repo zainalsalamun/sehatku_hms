@@ -54,17 +54,27 @@ flutter pub get
 
 ---
 
-### Menjalankan di Browser (Flutter Web)
-Rekomendasi untuk menguji Dashboard Admin, Kasir POS, dan Dashboard Dokter:
+### Menjalankan di Browser Google Chrome (Flutter Web)
+Rekomendasi untuk menguji seluruh modul: Portal Pasien, Layar TV Antrean (/queue-display), Dashboard Dokter, Kasir POS, dan Dashboard Admin:
 
 ```bash
+# 1. Jalankan langsung di Google Chrome (Default)
 flutter run -d chrome
-```
 
-Atau menggunakan Web Server lokal:
-```bash
+# 2. Jalankan dengan port spesifik (misal port 8080)
+flutter run -d chrome --web-port=8080
+
+# 3. Jalankan dengan API Base URL kustom (opsional)
+flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:3000/api/v1
+
+# 4. Mode Web Server (akses manual via http://localhost:8080)
 flutter run -d web-server --web-port 8080
 ```
+
+#### Pintasan Terminal Interaktif:
+- **`r`** : Hot Reload (UI langsung berubah seketika).
+- **`R`** : Hot Restart (Mulai ulang state aplikasi).
+- **`q`** : Menghentikan debug server.
 
 ---
 
