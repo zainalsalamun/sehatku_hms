@@ -183,6 +183,7 @@ class _InpatientAdmissionDialogState
                       flex: 2,
                       child: DropdownButtonFormField<String>(
                         initialValue: _admissionType,
+                        isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: 'Asal Masuk / Rujukan',
                           prefixIcon: Icon(Icons.input_outlined),
@@ -191,19 +192,19 @@ class _InpatientAdmissionDialogState
                         items: const [
                           DropdownMenuItem(
                             value: 'Poliklinik',
-                            child: Text('Poliklinik'),
+                            child: Text('Poliklinik', overflow: TextOverflow.ellipsis),
                           ),
                           DropdownMenuItem(
                             value: 'IGD / Darurat',
-                            child: Text('IGD / Darurat'),
+                            child: Text('IGD / Darurat', overflow: TextOverflow.ellipsis),
                           ),
                           DropdownMenuItem(
                             value: 'Rujukan Luar',
-                            child: Text('Rujukan Luar'),
+                            child: Text('Rujukan Luar', overflow: TextOverflow.ellipsis),
                           ),
                           DropdownMenuItem(
                             value: 'Rawat Terencana',
-                            child: Text('Rawat Terencana'),
+                            child: Text('Rawat Terencana', overflow: TextOverflow.ellipsis),
                           ),
                         ],
                         onChanged: (v) =>

@@ -213,6 +213,7 @@ class _LabOrderCreateDialogState extends ConsumerState<LabOrderCreateDialog> {
                     flex: 2,
                     child: DropdownButtonFormField<String>(
                       initialValue: _priority,
+                      isExpanded: true,
                       decoration: const InputDecoration(
                         labelText: 'Prioritas *',
                         isDense: true,
@@ -221,11 +222,17 @@ class _LabOrderCreateDialogState extends ConsumerState<LabOrderCreateDialog> {
                       items: const [
                         DropdownMenuItem(
                           value: 'Normal',
-                          child: Text('Normal (Rutin)'),
+                          child: Text(
+                            'Normal (Rutin)',
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                         DropdownMenuItem(
                           value: 'CITO',
-                          child: Text('CITO (Darurat / Cepat)'),
+                          child: Text(
+                            'CITO (Darurat)',
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                       onChanged: (v) =>
