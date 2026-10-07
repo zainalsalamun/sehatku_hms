@@ -70,6 +70,7 @@ class HmsApiClient {
           'phone': doctor.phone,
           'email': doctor.email,
           'scheduleDays': doctor.scheduleDays,
+          'avatarUrl': doctor.photoUrl,
         },
       );
       if (response.statusCode == 201 && response.data != null) {
@@ -94,6 +95,7 @@ class HmsApiClient {
           'phone': doctor.phone,
           'email': doctor.email,
           'scheduleDays': doctor.scheduleDays,
+          'avatarUrl': doctor.photoUrl,
           'status': doctor.isActive ? 'active' : 'inactive',
         },
       );

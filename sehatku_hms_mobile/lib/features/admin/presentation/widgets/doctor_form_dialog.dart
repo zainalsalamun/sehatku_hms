@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/config/app_env.dart';
 import '../../../../shared/models/health_models.dart';
 import '../../application/admin_state_providers.dart';
 
@@ -22,6 +23,7 @@ class _DoctorFormDialogState extends ConsumerState<DoctorFormDialog> {
   late final TextEditingController _phoneController;
   late final TextEditingController _emailController;
   late final TextEditingController _experienceController;
+  late final TextEditingController _photoUrlController;
 
   late String _selectedDepartment;
   late List<String> _selectedDays;
@@ -36,6 +38,29 @@ class _DoctorFormDialogState extends ConsumerState<DoctorFormDialog> {
     'Sabtu',
   ];
 
+  final List<Map<String, String>> _presetAvatars = [
+    {
+      'label': 'dr. Maya (Sp.JP)',
+      'url': '/public/doctors/dr_maya_pratama.jpg',
+    },
+    {
+      'label': 'drg. Rafi (Sp.KG)',
+      'url': '/public/doctors/drg_rafi_akbar.jpg',
+    },
+    {
+      'label': 'dr. Sarah (Sp.A)',
+      'url': '/public/doctors/dr_sarah_olivia.jpg',
+    },
+    {
+      'label': 'dr. Bima (Sp.S)',
+      'url': '/public/doctors/dr_bima_santoso.jpg',
+    },
+    {
+      'label': 'dr. Hendra (Sp.PD)',
+      'url': '/public/doctors/dr_hendra_wijaya.jpg',
+    },
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -45,6 +70,7 @@ class _DoctorFormDialogState extends ConsumerState<DoctorFormDialog> {
     _specialistController = TextEditingController(text: d?.specialist ?? '');
     _phoneController = TextEditingController(text: d?.phone ?? '');
     _emailController = TextEditingController(text: d?.email ?? '');
+    _photoUrlController = TextEditingController(text: d?.photoUrl ?? '');
     _experienceController = TextEditingController(
       text: d != null ? d.experience.toString() : '5',
     );
@@ -64,6 +90,7 @@ class _DoctorFormDialogState extends ConsumerState<DoctorFormDialog> {
     _phoneController.dispose();
     _emailController.dispose();
     _experienceController.dispose();
+    _photoUrlController.dispose();
     super.dispose();
   }
 
@@ -87,6 +114,7 @@ class _DoctorFormDialogState extends ConsumerState<DoctorFormDialog> {
       phone: _phoneController.text.trim(),
       scheduleDays: _selectedDays,
       isActive: _isActive,
+      photoUrl: _photoUrlController.text.trim(),
     );
 
     if (isEdit) {
@@ -112,11 +140,12 @@ class _DoctorFormDialogState extends ConsumerState<DoctorFormDialog> {
   Widget build(BuildContext context) {
     final departments = ref.watch(adminDepartmentsProvider);
     final isEdit = widget.doctor != null;
+    final resolvedPhotoUrl = AppEnv.resolveMediaUrl(_photoUrlController.text.trim());
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
-        width: 620,
+        width: 650,
         padding: const EdgeInsets.all(24),
         child: SingleChildScrollView(
           child: Form(
@@ -148,8 +177,8 @@ class _DoctorFormDialogState extends ConsumerState<DoctorFormDialog> {
                           ),
                           Text(
                             isEdit
-                                ? 'Perbarui informasi dan jadwal praktek'
-                                : 'Masukkan kredensial SIP dan departemen',
+                                ? 'Perbarui profil, foto, dan jadwal praktek'
+                                : 'Masukkan data SIP, foto profil, dan jadwal praktek dokter',
                             style: const TextStyle(
                               color: Colors.grey,
                               fontSize: 13,
@@ -164,7 +193,126 @@ class _DoctorFormDialogState extends ConsumerState<DoctorFormDialog> {
                     ),
                   ],
                 ),
-                const Divider(height: 32),
+                const Divider(height: 28),
+
+                // Foto Profil Section
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          // Live Circle Avatar Preview
+                          Container(
+                            width: 64,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Theme.of(context).colorScheme.primary,
+                                width: 2,
+                              ),
+                            ),
+                            child: ClipOval(
+                              child: resolvedPhotoUrl.isNotEmpty
+                                  ? Image.network(
+                                      resolvedPhotoUrl,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => const Icon(
+                                        Icons.person,
+                                        size: 36,
+                                        color: Colors.grey,
+                                      ),
+                                    )
+                                  : const Icon(
+                                      Icons.person,
+                                      size: 36,
+                                      color: Colors.grey,
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Foto Profil Dokter',
+                                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                                ),
+                                const SizedBox(height: 4),
+                                const Text(
+                                  'Pilih preset foto dokter klinik atau masukkan URL foto kustom',
+                                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                                ),
+                                const SizedBox(height: 8),
+                                // Preset Avatars Chips
+                                Wrap(
+                                  spacing: 6,
+                                  runSpacing: 6,
+                                  children: _presetAvatars.map((preset) {
+                                    final isSelected = _photoUrlController.text.trim() == preset['url'];
+                                    return ActionChip(
+                                      avatar: CircleAvatar(
+                                        backgroundImage: NetworkImage(
+                                          AppEnv.resolveMediaUrl(preset['url']!),
+                                        ),
+                                      ),
+                                      label: Text(
+                                        preset['label']!,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                        ),
+                                      ),
+                                      backgroundColor: isSelected
+                                          ? Theme.of(context).colorScheme.primaryContainer
+                                          : null,
+                                      onPressed: () {
+                                        setState(() {
+                                          _photoUrlController.text = preset['url']!;
+                                        });
+                                      },
+                                    );
+                                  }).toList(),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _photoUrlController,
+                        onChanged: (_) => setState(() {}),
+                        decoration: InputDecoration(
+                          labelText: 'URL Foto Profil (Kustom / Asset)',
+                          hintText: 'https://domain.com/foto.jpg atau /public/doctors/...',
+                          prefixIcon: const Icon(Icons.image_outlined),
+                          suffixIcon: _photoUrlController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear, size: 18),
+                                  onPressed: () {
+                                    _photoUrlController.clear();
+                                    setState(() {});
+                                  },
+                                )
+                              : null,
+                          isDense: true,
+                          border: const OutlineInputBorder(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
 
                 // Form Fields
                 TextFormField(

@@ -41,6 +41,11 @@ export class CreateDoctorDto {
   @IsArray()
   @IsOptional()
   scheduleDays?: string[];
+
+  @ApiPropertyOptional({ example: '/public/doctors/dr_maya_pratama.jpg', description: 'URL foto profil dokter' })
+  @IsString()
+  @IsOptional()
+  avatarUrl?: string;
 }
 
 export class UpdateDoctorDto extends CreateDoctorDto {
