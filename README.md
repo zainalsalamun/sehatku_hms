@@ -96,7 +96,7 @@ sehatku_hms/
 
 ## 3. Panduan Penggunaan Sistem Berdasarkan Role
 
-### 👤 Panduan Pengguna: Pasien (Portal Pasien)
+### Panduan Pengguna: Pasien (Portal Pasien)
 1. Login sebagai Pasien menggunakan email dan password akun terdaftar.
 2. Buat Janji Temu:
    - Pilih Dokter Spesialis dan Poli yang diinginkan.
@@ -110,7 +110,7 @@ sehatku_hms/
 
 ---
 
-### 👨‍⚕️ Panduan Pengguna: Dokter (Dashboard Dokter)
+### Panduan Pengguna: Dokter (Dashboard Dokter)
 1. Login sebagai Dokter menggunakan akun dokter.
 2. Memeriksa Antrean Pasien:
    - Pantau daftar antrean pasien hari ini pada panel antrean.
@@ -123,7 +123,7 @@ sehatku_hms/
 
 ---
 
-### 🏢 Panduan Pengguna: Administrator, Loket Pendaftaran, Kasir, dan Farmasi
+### Panduan Pengguna: Administrator, Loket Pendaftaran, Kasir, dan Farmasi
 
 #### 1. Loket Admisi & Pendaftaran Pasien:
 - Buka tab Reservasi & Antrean.

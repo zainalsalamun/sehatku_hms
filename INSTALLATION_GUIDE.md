@@ -1,10 +1,10 @@
-# 🚀 Panduan Instalasi & Deployment - SehatKu HMS
+# Panduan Instalasi & Deployment - SehatKu HMS
 
 Dokumentasi resmi instalasi dan konfigurasi sistem **SehatKu HMS (Hospital Management System)** untuk lingkungan Development (Lokal) maupun Production (Server/VPS).
 
 ---
 
-## 📋 Daftar Isi
+## Daftar Isi
 1. [Prasyarat Sistem](#1-prasyarat-sistem)
 2. [Metode 1: Menjalankan Cepat dengan Docker (Rekomendasi)](#2-metode-1-menjalankan-cepat-dengan-docker-rekomendasi)
 3. [Metode 2: Instalasi Manual (Lokal / VPS)](#3-metode-2-instalasi-manual-lokal--vps)

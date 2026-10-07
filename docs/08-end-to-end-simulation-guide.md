@@ -99,7 +99,7 @@ Untuk menguji alur secara simultan, disarankan membuka **3 jendela browser berda
 
 ---
 
-### 🟢 Skenario A: Rawat Jalan Poliklinik $\to$ Farmasi $\to$ Kasir
+### Skenario A: Rawat Jalan Poliklinik $\to$ Farmasi $\to$ Kasir
 
 1. **Pendaftaran Pasien (Loket Admisi)**:
    - Di Jendela 2 (Admin), masuk ke tab **Reservasi & Antrean** $\to$ klik **Daftar Reservasi / Walk-in**.
@@ -138,7 +138,7 @@ Untuk menguji alur secara simultan, disarankan membuka **3 jendela browser berda
 
 ---
 
-### 🔬 Skenario B: Pemeriksaan Laboratorium & LIS
+### Skenario B: Pemeriksaan Laboratorium & LIS
 
 1. **Pemesanan Tes Lab oleh Dokter**:
    - Pada form konsultasi dokter, di bagian order laboratorium, pilih pemeriksaan *Hematologi Lengkap* / *Profil Lipid*, pilih prioritas *CITO* atau *Normal*.
@@ -154,7 +154,7 @@ Untuk menguji alur secara simultan, disarankan membuka **3 jendela browser berda
 
 ---
 
-### 🛏️ Skenario C: Rawat Inap (Ranap), CPPT, & Pemulangan (Discharge)
+### Skenario C: Rawat Inap (Ranap), CPPT, & Pemulangan (Discharge)
 
 1. **Admisi Masuk Bed**:
    - Di tab **Rawat Inap & Bed**, pantau indikator BOR dan denah kamar.
@@ -172,7 +172,7 @@ Untuk menguji alur secara simultan, disarankan membuka **3 jendela browser berda
 
 ---
 
-### 📊 Skenario D: Tutup Kasir & Laporan LB1 Dinas Kesehatan
+### Skenario D: Tutup Kasir & Laporan LB1 Dinas Kesehatan
 
 1. **Tutup Shift Kasir (Closing POS)**:
    - Di tab **Kasir & Tagihan**, klik **Tutup Shift & Rekap Kas**.
