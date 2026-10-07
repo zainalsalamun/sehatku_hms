@@ -38,6 +38,30 @@ services:
       timeout: 5s
       retries: 5
 
+  backend:
+    build:
+      context: ./sehatku_hms_backend
+      dockerfile: Dockerfile
+    container_name: sehatku-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: "postgresql://sehatku_admin:sehatku_password_secure_2026@postgres:5432/sehatku_hms_db?schema=public"
+      PORT: 3000
+      NODE_ENV: production
+      JWT_SECRET: "sehatku_super_secret_jwt_key_2026_production_grade"
+      JWT_EXPIRES_IN: "1d"
+      REDIS_HOST: "redis"
+      REDIS_PORT: "6379"
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - sehatku-network
+
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: sehatku-pgadmin
