@@ -415,6 +415,8 @@ class _AdminPharmacyTabState extends ConsumerState<AdminPharmacyTab>
           ),
         ),
       );
+    }
+
     return Column(
       children: [
         ListView.separated(
