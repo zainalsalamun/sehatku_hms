@@ -147,38 +147,35 @@ class _LabOrderCreateDialogState extends ConsumerState<LabOrderCreateDialog> {
               ),
               const Divider(height: 20),
 
-              // Top Row: Patient & Doctor & Priority
+              // Patient Selection (Full Width)
+              DropdownButtonFormField<Patient>(
+                initialValue: _selectedPatient,
+                decoration: const InputDecoration(
+                  labelText: 'Pasien *',
+                  prefixIcon: Icon(Icons.person_search),
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+                isExpanded: true,
+                items: patients.map((p) {
+                  return DropdownMenuItem(
+                    value: p,
+                    child: Text(
+                      '${p.name} • ${p.medicalRecordNumber} (${p.insuranceProvider ?? "Umum"})',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                }).toList(),
+                onChanged: widget.preselectedPatient != null
+                    ? null
+                    : (p) => setState(() => _selectedPatient = p),
+                validator: (v) => v == null ? 'Pilih pasien' : null,
+              ),
+              const SizedBox(height: 10),
+
+              // Doctor & Priority Row
               Row(
                 children: [
-                  // Patient
-                  Expanded(
-                    flex: 3,
-                    child: DropdownButtonFormField<Patient>(
-                      initialValue: _selectedPatient,
-                      decoration: const InputDecoration(
-                        labelText: 'Pasien *',
-                        prefixIcon: Icon(Icons.person_search),
-                        isDense: true,
-                        border: OutlineInputBorder(),
-                      ),
-                      isExpanded: true,
-                      items: patients.map((p) {
-                        return DropdownMenuItem(
-                          value: p,
-                          child: Text(
-                            '${p.name} • ${p.medicalRecordNumber} (${p.insuranceProvider ?? "Umum"})',
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        );
-                      }).toList(),
-                      onChanged: widget.preselectedPatient != null
-                          ? null
-                          : (p) => setState(() => _selectedPatient = p),
-                      validator: (v) => v == null ? 'Pilih pasien' : null,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-
                   // Doctor
                   Expanded(
                     flex: 3,
@@ -216,6 +213,7 @@ class _LabOrderCreateDialogState extends ConsumerState<LabOrderCreateDialog> {
                       isExpanded: true,
                       decoration: const InputDecoration(
                         labelText: 'Prioritas *',
+                        prefixIcon: Icon(Icons.flag_outlined),
                         isDense: true,
                         border: OutlineInputBorder(),
                       ),

@@ -389,6 +389,7 @@ class _InpatientCPPTDialogState extends ConsumerState<InpatientCPPTDialog> {
                 Expanded(
                   child: DropdownButtonFormField<String>(
                     initialValue: _recorderRole,
+                    isExpanded: true,
                     decoration: const InputDecoration(
                       labelText: 'Profesi PPA *',
                       isDense: true,
@@ -397,24 +398,42 @@ class _InpatientCPPTDialogState extends ConsumerState<InpatientCPPTDialog> {
                     items: const [
                       DropdownMenuItem(
                         value: 'Dokter DPJP',
-                        child: Text('Dokter DPJP (Visite Utama)'),
+                        child: Text(
+                          'Dokter DPJP (Visite Utama)',
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       DropdownMenuItem(
                         value: 'Dokter Jaga',
-                        child: Text('Dokter Jaga Ruangan / Bangsal'),
+                        child: Text(
+                          'Dokter Jaga Ruangan / Bangsal',
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       DropdownMenuItem(
                         value: 'Perawat Ranap',
-                        child: Text('Perawat Rawat Inap'),
+                        child: Text(
+                          'Perawat Rawat Inap',
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                      DropdownMenuItem(value: 'Bidan', child: Text('Bidan')),
+                      DropdownMenuItem(
+                        value: 'Bidan',
+                        child: Text('Bidan', overflow: TextOverflow.ellipsis),
+                      ),
                       DropdownMenuItem(
                         value: 'Ahli Gizi',
-                        child: Text('Ahli Gizi (Diet & Nutrisi)'),
+                        child: Text(
+                          'Ahli Gizi (Diet & Nutrisi)',
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       DropdownMenuItem(
                         value: 'Farmasi Klinis',
-                        child: Text('Farmasi Klinis (Rekonsiliasi Obat)'),
+                        child: Text(
+                          'Farmasi Klinis (Rekonsiliasi Obat)',
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                     onChanged: (v) =>

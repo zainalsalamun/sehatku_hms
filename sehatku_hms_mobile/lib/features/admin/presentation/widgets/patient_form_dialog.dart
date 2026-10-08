@@ -244,6 +244,7 @@ class _PatientFormDialogState extends ConsumerState<PatientFormDialog> {
                 ),
                 const SizedBox(height: 16),
 
+                // Birth Date & Gender Row
                 Row(
                   children: [
                     Expanded(
@@ -258,6 +259,7 @@ class _PatientFormDialogState extends ConsumerState<PatientFormDialog> {
                           ),
                           child: Text(
                             '${_birthDate.day}/${_birthDate.month}/${_birthDate.year}',
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ),
@@ -285,14 +287,21 @@ class _PatientFormDialogState extends ConsumerState<PatientFormDialog> {
                         },
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    SizedBox(
-                      width: 110,
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Blood Type & Insurance Provider Row
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 1,
                       child: DropdownButtonFormField<String>(
                         initialValue: _bloodType,
                         isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: 'Gol. Darah',
+                          prefixIcon: Icon(Icons.bloodtype_outlined),
                           border: OutlineInputBorder(),
                         ),
                         items: _bloodTypes
@@ -308,29 +317,31 @@ class _PatientFormDialogState extends ConsumerState<PatientFormDialog> {
                         },
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                DropdownButtonFormField<String>(
-                  initialValue: _insurance,
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Penjamin Biaya / Asuransi *',
-                    prefixIcon: Icon(Icons.health_and_safety_outlined),
-                    border: OutlineInputBorder(),
-                  ),
-                  items: _insurances
-                      .map(
-                        (ins) => DropdownMenuItem(
-                          value: ins,
-                          child: Text(ins, overflow: TextOverflow.ellipsis),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      flex: 2,
+                      child: DropdownButtonFormField<String>(
+                        initialValue: _insurance,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Penjamin / Asuransi *',
+                          prefixIcon: Icon(Icons.health_and_safety_outlined),
+                          border: OutlineInputBorder(),
                         ),
-                      )
-                      .toList(),
-                  onChanged: (val) {
-                    if (val != null) setState(() => _insurance = val);
-                  },
+                        items: _insurances
+                            .map(
+                              (ins) => DropdownMenuItem(
+                                value: ins,
+                                child: Text(ins, overflow: TextOverflow.ellipsis),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (val) {
+                          if (val != null) setState(() => _insurance = val);
+                        },
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
 

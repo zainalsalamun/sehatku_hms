@@ -247,6 +247,7 @@ class _InpatientDischargeDialogState
                 // Kondisi Keluar
                 DropdownButtonFormField<String>(
                   initialValue: _dischargeCondition,
+                  isExpanded: true,
                   decoration: const InputDecoration(
                     labelText: 'Kondisi Saat Pulang *',
                     prefixIcon: Icon(Icons.health_and_safety_outlined),
@@ -255,27 +256,38 @@ class _InpatientDischargeDialogState
                   items: const [
                     DropdownMenuItem(
                       value: 'Sembuh',
-                      child: Text('Sembuh (Kondisi Sehat / Pulih)'),
+                      child: Text(
+                        'Sembuh (Kondisi Sehat / Pulih)',
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     DropdownMenuItem(
                       value: 'Perbaikan',
-                      child: Text('Perbaikan (Boleh Rawat Jalan / Kontrol)'),
+                      child: Text(
+                        'Perbaikan (Boleh Rawat Jalan / Kontrol)',
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     DropdownMenuItem(
                       value: 'Rujuk RS Lain',
                       child: Text(
                         'Rujuk ke RS Tingkat Lanjutan / Subspesialis',
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     DropdownMenuItem(
                       value: 'Pulang Paksa',
                       child: Text(
                         'Pulang Atas Permintaan Sendiri (APS / Pulang Paksa)',
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     DropdownMenuItem(
                       value: 'Meninggal',
-                      child: Text('Meninggal Dunia'),
+                      child: Text(
+                        'Meninggal Dunia',
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                   onChanged: (v) =>

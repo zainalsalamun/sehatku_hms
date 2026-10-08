@@ -89,6 +89,7 @@ class _OpenCashierShiftDialogState
               // Shift Name Selector
               DropdownButtonFormField<String>(
                 initialValue: _shiftName,
+                isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'Pilih Shift Operasional',
                   prefixIcon: Icon(Icons.schedule),
@@ -97,15 +98,15 @@ class _OpenCashierShiftDialogState
                 items: const [
                   DropdownMenuItem(
                     value: 'Pagi',
-                    child: Text('Shift Pagi (08:00 - 15:00)'),
+                    child: Text('Shift Pagi (08:00 - 15:00)', overflow: TextOverflow.ellipsis),
                   ),
                   DropdownMenuItem(
                     value: 'Siang',
-                    child: Text('Shift Siang (14:00 - 21:00)'),
+                    child: Text('Shift Siang (14:00 - 21:00)', overflow: TextOverflow.ellipsis),
                   ),
                   DropdownMenuItem(
                     value: 'Malam',
-                    child: Text('Shift Malam / Jaga (20:00 - 08:00)'),
+                    child: Text('Shift Malam / Jaga (20:00 - 08:00)', overflow: TextOverflow.ellipsis),
                   ),
                 ],
                 onChanged: (val) => setState(() => _shiftName = val ?? 'Pagi'),

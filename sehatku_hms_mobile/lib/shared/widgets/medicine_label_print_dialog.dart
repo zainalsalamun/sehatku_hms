@@ -314,6 +314,7 @@ class _MedicineLabelPrintDialogState extends State<MedicineLabelPrintDialog> {
                 const SizedBox(height: 6),
                 DropdownButtonFormField<String>(
                   initialValue: _mealTiming,
+                  isExpanded: true,
                   decoration: const InputDecoration(
                     isDense: true,
                     contentPadding: EdgeInsets.symmetric(
@@ -325,19 +326,19 @@ class _MedicineLabelPrintDialogState extends State<MedicineLabelPrintDialog> {
                   items: const [
                     DropdownMenuItem(
                       value: 'Sesudah Makan',
-                      child: Text('Sesudah Makan (P.C.)'),
+                      child: Text('Sesudah Makan (P.C.)', overflow: TextOverflow.ellipsis),
                     ),
                     DropdownMenuItem(
                       value: 'Sebelum Makan',
-                      child: Text('Sebelum Makan (A.C.)'),
+                      child: Text('Sebelum Makan (A.C.)', overflow: TextOverflow.ellipsis),
                     ),
                     DropdownMenuItem(
                       value: 'Bersama Makan',
-                      child: Text('Bersama Makan / Saat Makan (D.C.)'),
+                      child: Text('Bersama Makan / Saat Makan (D.C.)', overflow: TextOverflow.ellipsis),
                     ),
                     DropdownMenuItem(
                       value: 'Sesuai Kebutuhan (P.R.N)',
-                      child: Text('Bila Perlu / Nyeri (P.R.N)'),
+                      child: Text('Bila Perlu / Nyeri (P.R.N)', overflow: TextOverflow.ellipsis),
                     ),
                   ],
                   onChanged: (val) => setState(() => _mealTiming = val!),

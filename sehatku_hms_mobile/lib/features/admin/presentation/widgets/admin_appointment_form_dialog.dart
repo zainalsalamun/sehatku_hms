@@ -328,6 +328,7 @@ class _AdminAppointmentFormDialogState
                             Expanded(
                               child: DropdownButtonFormField<String>(
                                 initialValue: _newGender,
+                                isExpanded: true,
                                 decoration: const InputDecoration(
                                   labelText: 'Jenis Kelamin',
                                   isDense: true,
@@ -336,11 +337,11 @@ class _AdminAppointmentFormDialogState
                                 items: const [
                                   DropdownMenuItem(
                                     value: 'Laki-laki',
-                                    child: Text('Laki-laki'),
+                                    child: Text('Laki-laki', overflow: TextOverflow.ellipsis),
                                   ),
                                   DropdownMenuItem(
                                     value: 'Perempuan',
-                                    child: Text('Perempuan'),
+                                    child: Text('Perempuan', overflow: TextOverflow.ellipsis),
                                   ),
                                 ],
                                 onChanged: (v) => setState(
@@ -348,43 +349,42 @@ class _AdminAppointmentFormDialogState
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                initialValue: _newInsurance,
-                                decoration: const InputDecoration(
-                                  labelText: 'Penjamin',
-                                  isDense: true,
-                                  border: OutlineInputBorder(),
-                                ),
-                                items: const [
-                                  DropdownMenuItem(
-                                    value: 'Umum / Pribadi',
-                                    child: Text('Umum / Pribadi'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'BPJS Kesehatan',
-                                    child: Text('BPJS Kesehatan'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'Prudential Health',
-                                    child: Text('Prudential Health'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'Allianz Care',
-                                    child: Text('Allianz Care'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'Mandiri Inhealth',
-                                    child: Text('Mandiri Inhealth'),
-                                  ),
-                                ],
-                                onChanged: (v) => setState(
-                                  () => _newInsurance = v ?? 'Umum / Pribadi',
-                                ),
-                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        DropdownButtonFormField<String>(
+                          initialValue: _newInsurance,
+                          isExpanded: true,
+                          decoration: const InputDecoration(
+                            labelText: 'Penjamin Pasien',
+                            isDense: true,
+                            border: OutlineInputBorder(),
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'Umum / Pribadi',
+                              child: Text('Umum / Pribadi', overflow: TextOverflow.ellipsis),
+                            ),
+                            DropdownMenuItem(
+                              value: 'BPJS Kesehatan',
+                              child: Text('BPJS Kesehatan', overflow: TextOverflow.ellipsis),
+                            ),
+                            DropdownMenuItem(
+                              value: 'Prudential Health',
+                              child: Text('Prudential Health', overflow: TextOverflow.ellipsis),
+                            ),
+                            DropdownMenuItem(
+                              value: 'Allianz Care',
+                              child: Text('Allianz Care', overflow: TextOverflow.ellipsis),
+                            ),
+                            DropdownMenuItem(
+                              value: 'Mandiri Inhealth',
+                              child: Text('Mandiri Inhealth', overflow: TextOverflow.ellipsis),
                             ),
                           ],
+                          onChanged: (v) => setState(
+                            () => _newInsurance = v ?? 'Umum / Pribadi',
+                          ),
                         ),
                       ],
                     ),
@@ -398,6 +398,7 @@ class _AdminAppointmentFormDialogState
                     Expanded(
                       child: DropdownButtonFormField<String>(
                         initialValue: _selectedDept,
+                        isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: 'Poli Layanan Medis',
                           prefixIcon: Icon(Icons.apartment_outlined),
@@ -406,7 +407,7 @@ class _AdminAppointmentFormDialogState
                         items: depts.map((d) {
                           return DropdownMenuItem(
                             value: d.name,
-                            child: Text(d.name),
+                            child: Text(d.name, overflow: TextOverflow.ellipsis),
                           );
                         }).toList(),
                         onChanged: (val) {
@@ -488,6 +489,7 @@ class _AdminAppointmentFormDialogState
                     Expanded(
                       child: DropdownButtonFormField<String>(
                         initialValue: _selectedTime,
+                        isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: 'Jam Praktek / Sesi',
                           prefixIcon: Icon(Icons.access_time),
@@ -496,7 +498,7 @@ class _AdminAppointmentFormDialogState
                         items: _timeSlots.map((slot) {
                           return DropdownMenuItem(
                             value: slot,
-                            child: Text('$slot WIB'),
+                            child: Text('$slot WIB', overflow: TextOverflow.ellipsis),
                           );
                         }).toList(),
                         onChanged: (val) =>
@@ -534,6 +536,7 @@ class _AdminAppointmentFormDialogState
                 // Initial Status
                 DropdownButtonFormField<String>(
                   initialValue: _initialStatus,
+                  isExpanded: true,
                   decoration: const InputDecoration(
                     labelText: 'Status Awal Pendaftaran',
                     prefixIcon: Icon(Icons.how_to_reg_outlined),
@@ -544,18 +547,21 @@ class _AdminAppointmentFormDialogState
                       value: 'Checked-in',
                       child: Text(
                         'Checked-in (Pasien Sudah Hadir di Loket / Ruang Tunggu)',
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     DropdownMenuItem(
                       value: 'Menunggu',
                       child: Text(
                         'Menunggu (Antrean Terbit, Menunggu Panggilan Dokter)',
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     DropdownMenuItem(
                       value: 'Terkonfirmasi',
                       child: Text(
                         'Terkonfirmasi (Booking / Reservasi Mendatang)',
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],

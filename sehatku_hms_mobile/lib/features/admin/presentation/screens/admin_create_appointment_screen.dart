@@ -378,6 +378,7 @@ class _AdminCreateAppointmentScreenState
                     flex: 2,
                     child: DropdownButtonFormField<String>(
                       initialValue: _patientInsuranceFilter,
+                      isExpanded: true,
                       decoration: InputDecoration(
                         isDense: true,
                         contentPadding: const EdgeInsets.symmetric(
@@ -391,19 +392,19 @@ class _AdminCreateAppointmentScreenState
                       items: const [
                         DropdownMenuItem(
                           value: 'all',
-                          child: Text('Semua Penjamin'),
+                          child: Text('Semua Penjamin', overflow: TextOverflow.ellipsis),
                         ),
                         DropdownMenuItem(
                           value: 'BPJS',
-                          child: Text('BPJS Kesehatan'),
+                          child: Text('BPJS Kesehatan', overflow: TextOverflow.ellipsis),
                         ),
                         DropdownMenuItem(
                           value: 'Umum',
-                          child: Text('Umum / Mandiri'),
+                          child: Text('Umum / Mandiri', overflow: TextOverflow.ellipsis),
                         ),
                         DropdownMenuItem(
                           value: 'Asuransi',
-                          child: Text('Asuransi Swasta'),
+                          child: Text('Asuransi Swasta', overflow: TextOverflow.ellipsis),
                         ),
                       ],
                       onChanged: (v) =>
@@ -582,60 +583,62 @@ class _AdminCreateAppointmentScreenState
                       Expanded(
                         child: DropdownButtonFormField<String>(
                           initialValue: _newGender,
+                          isExpanded: true,
                           decoration: const InputDecoration(
                             labelText: 'Jenis Kelamin',
+                            prefixIcon: Icon(Icons.transgender_outlined),
                             border: OutlineInputBorder(),
                           ),
                           items: const [
                             DropdownMenuItem(
                               value: 'Laki-laki',
-                              child: Text('Laki-laki'),
+                              child: Text('Laki-laki', overflow: TextOverflow.ellipsis),
                             ),
                             DropdownMenuItem(
                               value: 'Perempuan',
-                              child: Text('Perempuan'),
+                              child: Text('Perempuan', overflow: TextOverflow.ellipsis),
                             ),
                           ],
                           onChanged: (v) =>
                               setState(() => _newGender = v ?? 'Laki-laki'),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          initialValue: _newInsurance,
-                          decoration: const InputDecoration(
-                            labelText: 'Penjamin Pasien',
-                            border: OutlineInputBorder(),
-                          ),
-                          items: const [
-                            DropdownMenuItem(
-                              value: 'Umum / Pribadi',
-                              child: Text('Umum / Pribadi'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'BPJS Kesehatan',
-                              child: Text('BPJS Kesehatan'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'Prudential Health',
-                              child: Text('Prudential Health'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'Allianz Care',
-                              child: Text('Allianz Care'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'Mandiri Inhealth',
-                              child: Text('Mandiri Inhealth'),
-                            ),
-                          ],
-                          onChanged: (v) => setState(
-                            () => _newInsurance = v ?? 'Umum / Pribadi',
-                          ),
-                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: _newInsurance,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Penjamin Pasien',
+                      prefixIcon: Icon(Icons.health_and_safety_outlined),
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'Umum / Pribadi',
+                        child: Text('Umum / Pribadi', overflow: TextOverflow.ellipsis),
+                      ),
+                      DropdownMenuItem(
+                        value: 'BPJS Kesehatan',
+                        child: Text('BPJS Kesehatan', overflow: TextOverflow.ellipsis),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Prudential Health',
+                        child: Text('Prudential Health', overflow: TextOverflow.ellipsis),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Allianz Care',
+                        child: Text('Allianz Care', overflow: TextOverflow.ellipsis),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Mandiri Inhealth',
+                        child: Text('Mandiri Inhealth', overflow: TextOverflow.ellipsis),
                       ),
                     ],
+                    onChanged: (v) => setState(
+                      () => _newInsurance = v ?? 'Umum / Pribadi',
+                    ),
                   ),
                 ],
               ),
@@ -1009,22 +1012,33 @@ class _AdminCreateAppointmentScreenState
             // Initial Status
             DropdownButtonFormField<String>(
               initialValue: _initialStatus,
+              isExpanded: true,
               decoration: const InputDecoration(
                 labelText: 'Status Awal Reservasi',
+                prefixIcon: Icon(Icons.how_to_reg_outlined),
                 border: OutlineInputBorder(),
               ),
               items: const [
                 DropdownMenuItem(
                   value: 'Checked-in',
-                  child: Text('Checked-in (Pasien Hadir Langsung di Loket)'),
+                  child: Text(
+                    'Checked-in (Pasien Hadir Langsung di Loket)',
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
                 DropdownMenuItem(
                   value: 'Menunggu',
-                  child: Text('Menunggu (Antrean Terbit, Menunggu Dokter)'),
+                  child: Text(
+                    'Menunggu (Antrean Terbit, Menunggu Dokter)',
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
                 DropdownMenuItem(
                   value: 'Terkonfirmasi',
-                  child: Text('Terkonfirmasi (Booking / Reservasi Mendatang)'),
+                  child: Text(
+                    'Terkonfirmasi (Booking / Reservasi Mendatang)',
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
               onChanged: (val) =>
