@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/uuid_helper.dart';
 import '../../../../shared/models/health_models.dart';
+import '../../../../shared/widgets/admin_pagination_footer.dart';
 import '../../../procedures/application/procedures_provider.dart';
 
 class AdminProceduresTab extends ConsumerStatefulWidget {
@@ -17,6 +18,8 @@ class AdminProceduresTab extends ConsumerStatefulWidget {
 class _AdminProceduresTabState extends ConsumerState<AdminProceduresTab> {
   String _selectedCategory = 'Semua';
   final _searchController = TextEditingController();
+  int _currentPage = 1;
+  int _itemsPerPage = 10;
 
   final List<String> _categories = [
     'Semua',
@@ -231,6 +234,13 @@ class _AdminProceduresTabState extends ConsumerState<AdminProceduresTab> {
       return matchCat && matchSearch;
     }).toList();
 
+    final totalPages = (filtered.length / _itemsPerPage).ceil().clamp(1, 9999);
+    if (_currentPage > totalPages) {
+      _currentPage = totalPages;
+    }
+    final startIndex = (_currentPage - 1) * _itemsPerPage;
+    final paginated = filtered.skip(startIndex).take(_itemsPerPage).toList();
+
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -290,7 +300,7 @@ class _AdminProceduresTabState extends ConsumerState<AdminProceduresTab> {
                     filled: true,
                     fillColor: Colors.white,
                   ),
-                  onChanged: (_) => setState(() {}),
+                  onChanged: (_) => setState(() => _currentPage = 1),
                 ),
               ),
               const SizedBox(width: 14),
@@ -306,8 +316,10 @@ class _AdminProceduresTabState extends ConsumerState<AdminProceduresTab> {
                         child: ChoiceChip(
                           label: Text(cat),
                           selected: isSelected,
-                          onSelected: (_) =>
-                              setState(() => _selectedCategory = cat),
+                          onSelected: (_) => setState(() {
+                            _selectedCategory = cat;
+                            _currentPage = 1;
+                          }),
                         ),
                       );
                     }).toList(),
@@ -321,129 +333,147 @@ class _AdminProceduresTabState extends ConsumerState<AdminProceduresTab> {
           // Procedures Table / List
           Expanded(
             child: Container(
+              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.grey.shade200),
               ),
-              child: filtered.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'Tidak ada tindakan medis yang sesuai filter.',
-                      ),
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.all(12),
-                      itemCount: filtered.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1),
-                      itemBuilder: (context, idx) {
-                        final proc = filtered[idx];
-                        final isActive = proc.status == 'active';
-
-                        return ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 6,
-                          ),
-                          leading: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppTheme.navy.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: paginated.isEmpty
+                        ? const Center(
                             child: Text(
-                              proc.code,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                                color: AppTheme.navy,
-                              ),
+                              'Tidak ada tindakan medis yang sesuai filter.',
+                              style: TextStyle(color: Colors.grey),
                             ),
-                          ),
-                          title: Row(
-                            children: [
-                              Text(
-                                proc.name,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                  decoration: isActive
-                                      ? null
-                                      : TextDecoration.lineThrough,
-                                  color: isActive
-                                      ? Colors.black87
-                                      : Colors.grey,
+                          )
+                        : ListView.separated(
+                            padding: const EdgeInsets.all(12),
+                            itemCount: paginated.length,
+                            separatorBuilder: (_, __) => const Divider(height: 1),
+                            itemBuilder: (context, idx) {
+                              final proc = paginated[idx];
+                              final isActive = proc.status == 'active';
+
+                              return ListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 6,
                                 ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.blueGrey.shade50,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  proc.category,
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.blueGrey.shade800,
-                                    fontWeight: FontWeight.bold,
+                                leading: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.navy.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    proc.code,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                      color: AppTheme.navy,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          subtitle: Text(
-                            proc.description.isNotEmpty
-                                ? proc.description
-                                : 'Tindakan klinis standar',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                currency.format(proc.price),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 14,
-                                  color: Colors.teal,
+                                title: Row(
+                                  children: [
+                                    Text(
+                                      proc.name,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                        decoration: isActive
+                                            ? null
+                                            : TextDecoration.lineThrough,
+                                        color: isActive
+                                            ? Colors.black87
+                                            : Colors.grey,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.blueGrey.shade50,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        proc.category,
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.blueGrey.shade800,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                              const SizedBox(width: 14),
-                              IconButton(
-                                tooltip: 'Edit Tarif & Detail',
-                                icon: const Icon(
-                                  Icons.edit_outlined,
-                                  size: 18,
-                                  color: Colors.blue,
+                                subtitle: Text(
+                                  proc.description.isNotEmpty
+                                      ? proc.description
+                                      : 'Tindakan klinis standar',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade600,
+                                  ),
                                 ),
-                                onPressed: () =>
-                                    _showAddEditProcedureDialog(proc),
-                              ),
-                              Switch(
-                                value: isActive,
-                                activeThumbColor: Colors.green,
-                                onChanged: (_) {
-                                  ref
-                                      .read(clinicProceduresProvider.notifier)
-                                      .toggleStatus(proc.id);
-                                },
-                              ),
-                            ],
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      currency.format(proc.price),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 14,
+                                        color: Colors.teal,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    IconButton(
+                                      tooltip: 'Edit Tarif & Detail',
+                                      icon: const Icon(
+                                        Icons.edit_outlined,
+                                        size: 18,
+                                        color: Colors.blue,
+                                      ),
+                                      onPressed: () =>
+                                          _showAddEditProcedureDialog(proc),
+                                    ),
+                                    Switch(
+                                      value: isActive,
+                                      activeThumbColor: Colors.green,
+                                      onChanged: (_) {
+                                        ref
+                                            .read(clinicProceduresProvider.notifier)
+                                            .toggleStatus(proc.id);
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
                           ),
-                        );
-                      },
-                    ),
+                  ),
+                  AdminPaginationFooter(
+                    currentPage: _currentPage,
+                    totalItems: filtered.length,
+                    itemsPerPage: _itemsPerPage,
+                    onPageChanged: (p) => setState(() => _currentPage = p),
+                    onItemsPerPageChanged: (n) => setState(() {
+                      _itemsPerPage = n;
+                      _currentPage = 1;
+                    }),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

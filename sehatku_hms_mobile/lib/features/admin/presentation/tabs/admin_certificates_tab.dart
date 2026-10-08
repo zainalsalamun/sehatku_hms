@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../shared/widgets/admin_pagination_footer.dart';
 import '../../../medical_record/application/certificates_provider.dart';
 import '../../../medical_record/presentation/widgets/medical_certificate_dialog.dart';
 
@@ -14,6 +15,8 @@ class AdminCertificatesTab extends ConsumerStatefulWidget {
 
 class _AdminCertificatesTabState extends ConsumerState<AdminCertificatesTab> {
   final _searchController = TextEditingController();
+  int _currentPage = 1;
+  int _itemsPerPage = 10;
 
   @override
   void dispose() {
@@ -29,11 +32,18 @@ class _AdminCertificatesTabState extends ConsumerState<AdminCertificatesTab> {
     final filtered = certificates.where((c) {
       final q = _searchController.text.trim().toLowerCase();
       return q.isEmpty ||
-          c.patientName.toLowerCase().contains(c.patientName) ||
+          c.patientName.toLowerCase().contains(q) ||
           c.certificateNumber.toLowerCase().contains(q) ||
           c.doctorName.toLowerCase().contains(q) ||
           c.diagnosis.toLowerCase().contains(q);
     }).toList();
+
+    final totalPages = (filtered.length / _itemsPerPage).ceil().clamp(1, 9999);
+    if (_currentPage > totalPages) {
+      _currentPage = totalPages;
+    }
+    final startIndex = (_currentPage - 1) * _itemsPerPage;
+    final paginatedCerts = filtered.skip(startIndex).take(_itemsPerPage).toList();
 
     return Padding(
       padding: const EdgeInsets.all(24),
@@ -78,7 +88,7 @@ class _AdminCertificatesTabState extends ConsumerState<AdminCertificatesTab> {
               filled: true,
               fillColor: Colors.white,
             ),
-            onChanged: (_) => setState(() {}),
+            onChanged: (_) => setState(() => _currentPage = 1),
           ),
           const SizedBox(height: 18),
 
@@ -94,85 +104,101 @@ class _AdminCertificatesTabState extends ConsumerState<AdminCertificatesTab> {
                   ? const Center(
                       child: Text('Belum ada surat keterangan medis yang diterbitkan.'),
                     )
-                  : ListView.separated(
-                      padding: const EdgeInsets.all(12),
-                      itemCount: filtered.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1),
-                      itemBuilder: (context, idx) {
-                        final cert = filtered[idx];
-                        final isSickLeave = cert.type == 'sick_leave';
+                  : Column(
+                      children: [
+                        Expanded(
+                          child: ListView.separated(
+                            padding: const EdgeInsets.all(12),
+                            itemCount: paginatedCerts.length,
+                            separatorBuilder: (_, __) => const Divider(height: 1),
+                            itemBuilder: (context, idx) {
+                              final cert = paginatedCerts[idx];
+                              final isSickLeave = cert.type == 'sick_leave';
 
-                        return ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          leading: CircleAvatar(
-                            backgroundColor: isSickLeave ? Colors.deepOrange.shade100 : Colors.teal.shade100,
-                            child: Icon(
-                              isSickLeave ? Icons.sick_outlined : Icons.health_and_safety_outlined,
-                              color: isSickLeave ? Colors.deepOrange.shade800 : Colors.teal.shade800,
-                            ),
-                          ),
-                          title: Row(
-                            children: [
-                              Text(
-                                cert.patientName,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade100,
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: Colors.grey.shade300),
-                                ),
-                                child: Text(
-                                  cert.certificateNumber,
-                                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: isSickLeave ? Colors.deepOrange.shade50 : Colors.teal.shade50,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  isSickLeave ? 'Surat Sakit (${cert.durationDays} Hari)' : 'Surat Sehat',
-                                  style: TextStyle(
-                                    fontSize: 10,
+                              return ListTile(
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                leading: CircleAvatar(
+                                  backgroundColor: isSickLeave ? Colors.deepOrange.shade100 : Colors.teal.shade100,
+                                  child: Icon(
+                                    isSickLeave ? Icons.sick_outlined : Icons.health_and_safety_outlined,
                                     color: isSickLeave ? Colors.deepOrange.shade800 : Colors.teal.shade800,
-                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                              ),
-                            ],
+                                title: Row(
+                                  children: [
+                                    Text(
+                                      cert.patientName,
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade100,
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(color: Colors.grey.shade300),
+                                      ),
+                                      child: Text(
+                                        cert.certificateNumber,
+                                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: isSickLeave ? Colors.deepOrange.shade50 : Colors.teal.shade50,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        isSickLeave ? 'Surat Sakit (${cert.durationDays} Hari)' : 'Surat Sehat',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: isSickLeave ? Colors.deepOrange.shade800 : Colors.teal.shade800,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Diagnosa: ${cert.diagnosis} • Dokter: ${cert.doctorName}',
+                                      style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                                    ),
+                                    Text(
+                                      'Masa Istirahat: ${dateFormat.format(cert.startDate)} s/d ${dateFormat.format(cert.endDate)}',
+                                      style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                                    ),
+                                  ],
+                                ),
+                                trailing: FilledButton.tonalIcon(
+                                  onPressed: () => showMedicalCertificateDialog(context, cert),
+                                  icon: const Icon(Icons.print_outlined, size: 16),
+                                  label: const Text('Buka & Cetak'),
+                                  style: FilledButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                ),
+                              );
+                            },
                           ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 2),
-                              Text(
-                                'Diagnosa: ${cert.diagnosis} • Dokter: ${cert.doctorName}',
-                                style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
-                              ),
-                              Text(
-                                'Masa Istirahat: ${dateFormat.format(cert.startDate)} s/d ${dateFormat.format(cert.endDate)}',
-                                style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
-                              ),
-                            ],
-                          ),
-                          trailing: FilledButton.tonalIcon(
-                            onPressed: () => showMedicalCertificateDialog(context, cert),
-                            icon: const Icon(Icons.print_outlined, size: 16),
-                            label: const Text('Buka & Cetak'),
-                            style: FilledButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                          ),
-                        );
-                      },
+                        ),
+                        AdminPaginationFooter(
+                          currentPage: _currentPage,
+                          totalItems: filtered.length,
+                          itemsPerPage: _itemsPerPage,
+                          onPageChanged: (page) => setState(() => _currentPage = page),
+                          onItemsPerPageChanged: (count) => setState(() {
+                            _itemsPerPage = count;
+                            _currentPage = 1;
+                          }),
+                        ),
+                      ],
                     ),
             ),
           ),

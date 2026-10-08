@@ -71,6 +71,14 @@ class _AdminAuditLogsTabState extends ConsumerState<AdminAuditLogsTab> {
             subtitle:
                 'Log mutasi data immutable yang mencatat seluruh aksi create, update, deaktivasi, dan pembatalan.',
             badgeCount: logs.length,
+            currentPage: safePage,
+            totalItems: totalItems,
+            itemsPerPage: _rowsPerPage,
+            onPageChanged: (page) => setState(() => _currentPage = page),
+            onItemsPerPageChanged: (count) => setState(() {
+              _rowsPerPage = count;
+              _currentPage = 1;
+            }),
             searchHint: 'Cari aktor, resource, aksi, atau detail...',
             onSearchChanged: (val) {
               setState(() {
@@ -107,11 +115,8 @@ class _AdminAuditLogsTabState extends ConsumerState<AdminAuditLogsTab> {
                 }
               },
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (filteredLogs.isEmpty)
-                  const Padding(
+            child: filteredLogs.isEmpty
+                ? const Padding(
                     padding: EdgeInsets.all(40),
                     child: Center(
                       child: Text(
@@ -120,172 +125,12 @@ class _AdminAuditLogsTabState extends ConsumerState<AdminAuditLogsTab> {
                       ),
                     ),
                   )
-                else ...[
-                  wide
-                      ? _buildDesktopTable(paginatedLogs)
-                      : _buildMobileList(paginatedLogs),
-                  const Divider(height: 1),
-                  _buildPaginationFooter(
-                    totalItems: totalItems,
-                    totalPages: totalPages,
-                    currentPage: safePage,
-                    startIndex: startIndex,
-                    endIndex: endIndex,
-                    wide: wide,
-                  ),
-                ],
-              ],
-            ),
+                : wide
+                ? _buildDesktopTable(paginatedLogs)
+                : _buildMobileList(paginatedLogs),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildPaginationFooter({
-    required int totalItems,
-    required int totalPages,
-    required int currentPage,
-    required int startIndex,
-    required int endIndex,
-    required bool wide,
-  }) {
-    final startDisplay = totalItems == 0 ? 0 : startIndex + 1;
-
-    final infoText = Text(
-      'Menampilkan $startDisplay-$endIndex dari $totalItems log',
-      style: TextStyle(
-        fontSize: 13,
-        color: Colors.grey.shade700,
-        fontWeight: FontWeight.w500,
-      ),
-    );
-
-    final rowsPerPageSelector = Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          'Baris per halaman:',
-          style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
-        ),
-        const SizedBox(width: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade300),
-            borderRadius: BorderRadius.circular(8),
-            color: Colors.white,
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<int>(
-              value: _rowsPerPage,
-              isDense: true,
-              items: _rowsPerPageOptions.map((opt) {
-                return DropdownMenuItem<int>(
-                  value: opt,
-                  child: Text(
-                    opt.toString(),
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                );
-              }).toList(),
-              onChanged: (newVal) {
-                if (newVal != null && newVal != _rowsPerPage) {
-                  setState(() {
-                    _rowsPerPage = newVal;
-                    _currentPage = 1;
-                  });
-                }
-              },
-            ),
-          ),
-        ),
-      ],
-    );
-
-    final pageControls = Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          tooltip: 'Halaman Pertama',
-          icon: const Icon(Icons.first_page, size: 20),
-          onPressed: currentPage > 1
-              ? () => setState(() => _currentPage = 1)
-              : null,
-        ),
-        IconButton(
-          tooltip: 'Halaman Sebelumnya',
-          icon: const Icon(Icons.chevron_left, size: 20),
-          onPressed: currentPage > 1
-              ? () => setState(() => _currentPage = currentPage - 1)
-              : null,
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: AppTheme.navy.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Text(
-            'Halaman $currentPage / $totalPages',
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.navy,
-            ),
-          ),
-        ),
-        IconButton(
-          tooltip: 'Halaman Selanjutnya',
-          icon: const Icon(Icons.chevron_right, size: 20),
-          onPressed: currentPage < totalPages
-              ? () => setState(() => _currentPage = currentPage + 1)
-              : null,
-        ),
-        IconButton(
-          tooltip: 'Halaman Terakhir',
-          icon: const Icon(Icons.last_page, size: 20),
-          onPressed: currentPage < totalPages
-              ? () => setState(() => _currentPage = totalPages)
-              : null,
-        ),
-      ],
-    );
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      color: Colors.grey.shade50,
-      child: wide
-          ? Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                infoText,
-                Row(
-                  children: [
-                    rowsPerPageSelector,
-                    const SizedBox(width: 24),
-                    pageControls,
-                  ],
-                ),
-              ],
-            )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    infoText,
-                    rowsPerPageSelector,
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Center(child: pageControls),
-              ],
-            ),
     );
   }
 

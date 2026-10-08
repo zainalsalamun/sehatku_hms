@@ -17,6 +17,8 @@ class AdminDoctorsTab extends ConsumerStatefulWidget {
 class _AdminDoctorsTabState extends ConsumerState<AdminDoctorsTab> {
   String _searchQuery = '';
   String _selectedDeptFilter = 'all';
+  int _currentPage = 1;
+  int _itemsPerPage = 10;
 
   @override
   Widget build(BuildContext context) {
@@ -34,6 +36,13 @@ class _AdminDoctorsTabState extends ConsumerState<AdminDoctorsTab> {
       return matchesSearch && matchesDept;
     }).toList();
 
+    final totalPages = (filteredDoctors.length / _itemsPerPage).ceil().clamp(1, 9999);
+    if (_currentPage > totalPages) {
+      _currentPage = totalPages;
+    }
+    final startIndex = (_currentPage - 1) * _itemsPerPage;
+    final paginatedDoctors = filteredDoctors.skip(startIndex).take(_itemsPerPage).toList();
+
     final wide = MediaQuery.sizeOf(context).width > 900;
 
     return SingleChildScrollView(
@@ -47,7 +56,18 @@ class _AdminDoctorsTabState extends ConsumerState<AdminDoctorsTab> {
                 'Kelola kredensial SIP/STR, spesialisasi, jadwal praktek, dan status aktif.',
             badgeCount: doctors.length,
             searchHint: 'Cari nama dokter, spesialisasi, atau no SIP...',
-            onSearchChanged: (val) => setState(() => _searchQuery = val),
+            onSearchChanged: (val) => setState(() {
+              _searchQuery = val;
+              _currentPage = 1;
+            }),
+            currentPage: _currentPage,
+            totalItems: filteredDoctors.length,
+            itemsPerPage: _itemsPerPage,
+            onPageChanged: (page) => setState(() => _currentPage = page),
+            onItemsPerPageChanged: (count) => setState(() {
+              _itemsPerPage = count;
+              _currentPage = 1;
+            }),
             actionLabel: 'Tambah Dokter',
             actionIcon: Icons.person_add_outlined,
             onActionPressed: () => _openDoctorDialog(context),
@@ -78,7 +98,12 @@ class _AdminDoctorsTabState extends ConsumerState<AdminDoctorsTab> {
                 ),
               ],
               onChanged: (val) {
-                if (val != null) setState(() => _selectedDeptFilter = val);
+                if (val != null) {
+                  setState(() {
+                    _selectedDeptFilter = val;
+                    _currentPage = 1;
+                  });
+                }
               },
             ),
             child: filteredDoctors.isEmpty
@@ -92,8 +117,8 @@ class _AdminDoctorsTabState extends ConsumerState<AdminDoctorsTab> {
                     ),
                   )
                 : wide
-                ? _buildDesktopTable(filteredDoctors, departments)
-                : _buildMobileList(filteredDoctors, departments),
+                ? _buildDesktopTable(paginatedDoctors, departments)
+                : _buildMobileList(paginatedDoctors, departments),
           ),
         ],
       ),

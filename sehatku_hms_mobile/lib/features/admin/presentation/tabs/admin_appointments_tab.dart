@@ -21,6 +21,8 @@ class AdminAppointmentsTab extends ConsumerStatefulWidget {
 class _AdminAppointmentsTabState extends ConsumerState<AdminAppointmentsTab> {
   String _searchQuery = '';
   String _statusFilter = 'all';
+  int _currentPage = 1;
+  int _itemsPerPage = 10;
 
   final List<String> _statusOptions = [
     'all',
@@ -45,6 +47,13 @@ class _AdminAppointmentsTabState extends ConsumerState<AdminAppointmentsTab> {
       return matchesSearch && matchesStatus;
     }).toList();
 
+    final totalPages = (filteredAppointments.length / _itemsPerPage).ceil().clamp(1, 9999);
+    if (_currentPage > totalPages) {
+      _currentPage = totalPages;
+    }
+    final startIndex = (_currentPage - 1) * _itemsPerPage;
+    final paginatedAppointments = filteredAppointments.skip(startIndex).take(_itemsPerPage).toList();
+
     final wide = MediaQuery.sizeOf(context).width > 900;
 
     return SingleChildScrollView(
@@ -57,6 +66,14 @@ class _AdminAppointmentsTabState extends ConsumerState<AdminAppointmentsTab> {
             subtitle:
                 'Pantau status kedatangan pasien, nomor antrean aktif, dan daftarkan pasien reservasi / walk-in loket.',
             badgeCount: appointments.length,
+            currentPage: _currentPage,
+            totalItems: filteredAppointments.length,
+            itemsPerPage: _itemsPerPage,
+            onPageChanged: (page) => setState(() => _currentPage = page),
+            onItemsPerPageChanged: (count) => setState(() {
+              _itemsPerPage = count;
+              _currentPage = 1;
+            }),
             actionLabel: 'Daftar Reservasi / Walk-in',
             actionIcon: Icons.person_add_alt_1,
             onActionPressed: () {
@@ -67,7 +84,10 @@ class _AdminAppointmentsTabState extends ConsumerState<AdminAppointmentsTab> {
               );
             },
             searchHint: 'Cari nomor antrean, nama pasien, atau dokter...',
-            onSearchChanged: (val) => setState(() => _searchQuery = val),
+            onSearchChanged: (val) => setState(() {
+              _searchQuery = val;
+              _currentPage = 1;
+            }),
             filterWidget: DropdownButtonFormField<String>(
               initialValue: _statusFilter,
               isExpanded: true,
@@ -89,7 +109,12 @@ class _AdminAppointmentsTabState extends ConsumerState<AdminAppointmentsTab> {
                 );
               }).toList(),
               onChanged: (val) {
-                if (val != null) setState(() => _statusFilter = val);
+                if (val != null) {
+                  setState(() {
+                    _statusFilter = val;
+                    _currentPage = 1;
+                  });
+                }
               },
             ),
             child: filteredAppointments.isEmpty
@@ -103,8 +128,8 @@ class _AdminAppointmentsTabState extends ConsumerState<AdminAppointmentsTab> {
                     ),
                   )
                 : wide
-                ? _buildDesktopTable(filteredAppointments)
-                : _buildMobileList(filteredAppointments),
+                ? _buildDesktopTable(paginatedAppointments)
+                : _buildMobileList(paginatedAppointments),
           ),
         ],
       ),

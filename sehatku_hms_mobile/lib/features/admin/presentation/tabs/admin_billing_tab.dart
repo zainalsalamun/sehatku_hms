@@ -23,6 +23,8 @@ class AdminBillingTab extends ConsumerStatefulWidget {
 class _AdminBillingTabState extends ConsumerState<AdminBillingTab> {
   String _searchQuery = '';
   String _statusFilter = 'all';
+  int _currentPage = 1;
+  int _itemsPerPage = 10;
 
   static const _statusOptions = ['all', 'Menunggu', 'Lunas', 'Dibatalkan'];
 
@@ -54,6 +56,13 @@ class _AdminBillingTabState extends ConsumerState<AdminBillingTab> {
       return matchStatus && matchSearch;
     }).toList();
 
+    final totalPages = (filteredInvoices.length / _itemsPerPage).ceil().clamp(1, 9999);
+    if (_currentPage > totalPages) {
+      _currentPage = totalPages;
+    }
+    final startIndex = (_currentPage - 1) * _itemsPerPage;
+    final paginatedInvoices = filteredInvoices.skip(startIndex).take(_itemsPerPage).toList();
+
     final wide = MediaQuery.sizeOf(context).width > 900;
 
     return SingleChildScrollView(
@@ -68,6 +77,14 @@ class _AdminBillingTabState extends ConsumerState<AdminBillingTab> {
             subtitle:
                 'Pencatatan tagihan terpadu tindakan poli + farmasi, proses kasir POS multi-kanal, dan cetak kwitansi resmi PDF.',
             badgeCount: billing.length,
+            currentPage: _currentPage,
+            totalItems: filteredInvoices.length,
+            itemsPerPage: _itemsPerPage,
+            onPageChanged: (page) => setState(() => _currentPage = page),
+            onItemsPerPageChanged: (count) => setState(() {
+              _itemsPerPage = count;
+              _currentPage = 1;
+            }),
             actionLabel: 'Export Rekap Kasir (.csv)',
             actionIcon: Icons.download_outlined,
             onActionPressed: () {
@@ -79,7 +96,10 @@ class _AdminBillingTabState extends ConsumerState<AdminBillingTab> {
               );
             },
             searchHint: 'Cari No. Invoice, nama pasien, atau metode bayar...',
-            onSearchChanged: (val) => setState(() => _searchQuery = val),
+            onSearchChanged: (val) => setState(() {
+              _searchQuery = val;
+              _currentPage = 1;
+            }),
             filterWidget: DropdownButtonFormField<String>(
               initialValue: _statusFilter,
               isExpanded: true,
@@ -101,7 +121,12 @@ class _AdminBillingTabState extends ConsumerState<AdminBillingTab> {
                 );
               }).toList(),
               onChanged: (val) {
-                if (val != null) setState(() => _statusFilter = val);
+                if (val != null) {
+                  setState(() {
+                    _statusFilter = val;
+                    _currentPage = 1;
+                  });
+                }
               },
             ),
             child: filteredInvoices.isEmpty
@@ -115,8 +140,8 @@ class _AdminBillingTabState extends ConsumerState<AdminBillingTab> {
                     ),
                   )
                 : wide
-                ? _buildDesktopTable(filteredInvoices)
-                : _buildMobileList(filteredInvoices),
+                ? _buildDesktopTable(paginatedInvoices)
+                : _buildMobileList(paginatedInvoices),
           ),
         ],
       ),

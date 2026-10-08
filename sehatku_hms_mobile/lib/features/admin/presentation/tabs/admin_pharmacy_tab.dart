@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/queue_voice_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/models/health_models.dart';
+import '../../../../shared/widgets/admin_pagination_footer.dart';
 import '../../../../shared/widgets/app_widgets.dart';
 import '../../../../shared/widgets/medicine_label_print_dialog.dart';
 import '../../../notification/application/notifications_provider.dart';
@@ -23,6 +24,10 @@ class _AdminPharmacyTabState extends ConsumerState<AdminPharmacyTab>
   late TabController _tabController;
   String _searchQuery = '';
   String _statusFilter = 'all';
+  int _currentPagePrescriptions = 1;
+  int _itemsPerPagePrescriptions = 10;
+  int _currentPageInventory = 1;
+  int _itemsPerPageInventory = 10;
 
   @override
   void initState() {
@@ -133,6 +138,30 @@ class _AdminPharmacyTabState extends ConsumerState<AdminPharmacyTab>
           m.category.toLowerCase().contains(q) ||
           m.batchNumber.toLowerCase().contains(q);
     }).toList();
+
+    final totalPrescriptionPages =
+        (filteredPrescriptions.length / _itemsPerPagePrescriptions).ceil().clamp(1, 9999);
+    if (_currentPagePrescriptions > totalPrescriptionPages) {
+      _currentPagePrescriptions = totalPrescriptionPages;
+    }
+    final startRxIndex =
+        (_currentPagePrescriptions - 1) * _itemsPerPagePrescriptions;
+    final paginatedPrescriptions = filteredPrescriptions
+        .skip(startRxIndex)
+        .take(_itemsPerPagePrescriptions)
+        .toList();
+
+    final totalInventoryPages =
+        (filteredInventory.length / _itemsPerPageInventory).ceil().clamp(1, 9999);
+    if (_currentPageInventory > totalInventoryPages) {
+      _currentPageInventory = totalInventoryPages;
+    }
+    final startInvIndex =
+        (_currentPageInventory - 1) * _itemsPerPageInventory;
+    final paginatedInventory = filteredInventory
+        .skip(startInvIndex)
+        .take(_itemsPerPageInventory)
+        .toList();
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -268,7 +297,11 @@ class _AdminPharmacyTabState extends ConsumerState<AdminPharmacyTab>
                     isDense: true,
                     border: OutlineInputBorder(),
                   ),
-                  onChanged: (val) => setState(() => _searchQuery = val),
+                  onChanged: (val) => setState(() {
+                    _searchQuery = val;
+                    _currentPagePrescriptions = 1;
+                    _currentPageInventory = 1;
+                  }),
                 ),
               ),
               const SizedBox(width: 12),
@@ -323,7 +356,12 @@ class _AdminPharmacyTabState extends ConsumerState<AdminPharmacyTab>
                     ),
                   ],
                   onChanged: (val) {
-                    if (val != null) setState(() => _statusFilter = val);
+                    if (val != null) {
+                      setState(() {
+                        _statusFilter = val;
+                        _currentPagePrescriptions = 1;
+                      });
+                    }
                   },
                 ),
               ),
@@ -336,8 +374,16 @@ class _AdminPharmacyTabState extends ConsumerState<AdminPharmacyTab>
             animation: _tabController,
             builder: (context, _) {
               return _tabController.index == 0
-                  ? _buildPrescriptionsList(context, filteredPrescriptions)
-                  : _buildInventoryList(context, filteredInventory);
+                  ? _buildPrescriptionsList(
+                      context,
+                      paginatedPrescriptions,
+                      filteredPrescriptions.length,
+                    )
+                  : _buildInventoryList(
+                      context,
+                      paginatedInventory,
+                      filteredInventory.length,
+                    );
             },
           ),
         ],
@@ -348,6 +394,7 @@ class _AdminPharmacyTabState extends ConsumerState<AdminPharmacyTab>
   Widget _buildPrescriptionsList(
     BuildContext context,
     List<PharmacyPrescription> prescriptions,
+    int totalPrescriptions,
   ) {
     if (prescriptions.isEmpty) {
       return Card(
@@ -368,9 +415,9 @@ class _AdminPharmacyTabState extends ConsumerState<AdminPharmacyTab>
           ),
         ),
       );
-    }
-
-    return ListView.separated(
+    return Column(
+      children: [
+        ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: prescriptions.length,
@@ -655,124 +702,176 @@ class _AdminPharmacyTabState extends ConsumerState<AdminPharmacyTab>
           ),
         );
       },
-    );
+    ),
+    const SizedBox(height: 12),
+    AdminPaginationFooter(
+      currentPage: _currentPagePrescriptions,
+      totalItems: totalPrescriptions,
+      itemsPerPage: _itemsPerPagePrescriptions,
+      onPageChanged: (page) =>
+          setState(() => _currentPagePrescriptions = page),
+      onItemsPerPageChanged: (count) => setState(() {
+        _itemsPerPagePrescriptions = count;
+        _currentPagePrescriptions = 1;
+      }),
+    ),
+  ],
+);
   }
 
   Widget _buildInventoryList(
     BuildContext context,
     List<MedicineStock> inventory,
+    int totalInventory,
   ) {
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: inventory.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 10),
-      itemBuilder: (context, idx) {
-        final m = inventory[idx];
-        Color statusColor = Colors.green;
-        String statusLabel = 'Stok Aman';
-
-        if (m.status == 'low') {
-          statusColor = Colors.orange;
-          statusLabel = 'Stok Menipis';
-        } else if (m.status == 'critical') {
-          statusColor = Colors.red;
-          statusLabel = 'Stok Kritis';
-        }
-
-        return Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: statusColor.withValues(alpha: 0.12),
-                  child: Icon(Icons.inventory_2_outlined, color: statusColor),
+    if (inventory.isEmpty) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(40),
+          child: Column(
+            children: const [
+              Icon(Icons.inventory_2_outlined, size: 48, color: Colors.grey),
+              SizedBox(height: 12),
+              Text(
+                'Tidak ada stok obat yang sesuai filter.',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontWeight: FontWeight.bold,
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: inventory.length,
+          separatorBuilder: (_, _) => const SizedBox(height: 10),
+          itemBuilder: (context, idx) {
+            final m = inventory[idx];
+            Color statusColor = Colors.green;
+            String statusLabel = 'Stok Aman';
+
+            if (m.status == 'low') {
+              statusColor = Colors.orange;
+              statusLabel = 'Stok Menipis';
+            } else if (m.status == 'critical') {
+              statusColor = Colors.red;
+              statusLabel = 'Stok Kritis';
+            }
+
+            return Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: statusColor.withValues(alpha: 0.12),
+                      child: Icon(Icons.inventory_2_outlined, color: statusColor),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          Row(
+                            children: [
+                              Text(
+                                m.name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: statusColor.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: statusColor.withValues(alpha: 0.4),
+                                  ),
+                                ),
+                                child: Text(
+                                  statusLabel,
+                                  style: TextStyle(
+                                    color: statusColor,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
                           Text(
-                            m.name,
+                            '${m.category} • Sediaan: ${m.form} • Batch: ${m.batchNumber}',
                             style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                              fontSize: 11,
+                              color: Colors.grey,
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: statusColor.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: statusColor.withValues(alpha: 0.4),
-                              ),
-                            ),
-                            child: Text(
-                              statusLabel,
-                              style: TextStyle(
-                                color: statusColor,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Kadaluwarsa (ED): ${m.expirationDate} • Min. Stok: ${m.minStock} ${m.unit}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey.shade700,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${m.category} • Sediaan: ${m.form} • Batch: ${m.batchNumber}',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Kadaluwarsa (ED): ${m.expirationDate} • Min. Stok: ${m.minStock} ${m.unit}',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '${m.stock} ${m.unit}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 16,
-                        color: statusColor,
-                      ),
                     ),
-                    const SizedBox(height: 6),
-                    OutlinedButton.icon(
-                      onPressed: () => _showRestockDialog(m),
-                      icon: const Icon(Icons.add, size: 14),
-                      label: const Text(
-                        'Restock',
-                        style: TextStyle(fontSize: 11),
-                      ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '${m.stock} ${m.unit}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 16,
+                            color: statusColor,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        OutlinedButton.icon(
+                          onPressed: () => _showRestockDialog(m),
+                          icon: const Icon(Icons.add, size: 14),
+                          label: const Text(
+                            'Restock',
+                            style: TextStyle(fontSize: 11),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
-        );
-      },
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+        AdminPaginationFooter(
+          currentPage: _currentPageInventory,
+          totalItems: totalInventory,
+          itemsPerPage: _itemsPerPageInventory,
+          onPageChanged: (page) =>
+              setState(() => _currentPageInventory = page),
+          onItemsPerPageChanged: (count) => setState(() {
+            _itemsPerPageInventory = count;
+            _currentPageInventory = 1;
+          }),
+        ),
+      ],
     );
   }
 }
