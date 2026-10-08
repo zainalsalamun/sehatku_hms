@@ -238,6 +238,28 @@ class NotificationsNotifier extends Notifier<NotificationsState> {
     );
     await ref.read(apiClientProvider).markAllNotificationsRead(role: role);
   }
+
+  Future<void> deleteNotification(String id) async {
+    final updatedItems = state.items.where((n) => n.id != id).toList();
+    final newUnread = updatedItems.where((n) => !n.isRead).length;
+    state = state.copyWith(
+      items: updatedItems,
+      unreadCount: newUnread,
+    );
+    await ref.read(apiClientProvider).deleteNotification(id);
+  }
+
+  Future<void> clearAllRead() async {
+    final readItems = state.items.where((n) => n.isRead).toList();
+    final updatedItems = state.items.where((n) => !n.isRead).toList();
+    state = state.copyWith(
+      items: updatedItems,
+      unreadCount: updatedItems.length,
+    );
+    for (final item in readItems) {
+      ref.read(apiClientProvider).deleteNotification(item.id);
+    }
+  }
 }
 
 final notificationsProvider =

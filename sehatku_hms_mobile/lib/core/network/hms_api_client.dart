@@ -924,6 +924,16 @@ class HmsApiClient {
     }
   }
 
+  Future<bool> deleteNotification(String id) async {
+    try {
+      final response = await _dio.delete('/notifications/$id');
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('[HmsApiClient] deleteNotification error: $e');
+      return false;
+    }
+  }
+
   // --- DEPARTMENTS ---
 
   Future<List<Department>> getDepartments() async {

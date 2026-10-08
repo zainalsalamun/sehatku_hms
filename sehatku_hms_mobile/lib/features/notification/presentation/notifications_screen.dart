@@ -632,6 +632,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       return true;
     }).toList();
 
+    final readCount = allItems.length - notifState.unreadCount;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -653,6 +655,53 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               icon: const Icon(Icons.done_all, size: 18),
               label: const Text('Tandai Dibaca'),
             ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            tooltip: 'Opsi Notifikasi',
+            onSelected: (value) {
+              if (value == 'mark_all_read') {
+                ref.read(notificationsProvider.notifier).markAllAsRead();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Semua notifikasi ditandai telah dibaca.'),
+                    backgroundColor: AppTheme.primary,
+                  ),
+                );
+              } else if (value == 'clear_read') {
+                ref.read(notificationsProvider.notifier).clearAllRead();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Notifikasi yang sudah dibaca telah dibersihkan.'),
+                    backgroundColor: AppTheme.navy,
+                  ),
+                );
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'mark_all_read',
+                enabled: notifState.unreadCount > 0,
+                child: const Row(
+                  children: [
+                    Icon(Icons.done_all, size: 18, color: AppTheme.primary),
+                    SizedBox(width: 8),
+                    Text('Tandai Semua Dibaca'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'clear_read',
+                enabled: readCount > 0,
+                child: const Row(
+                  children: [
+                    Icon(Icons.cleaning_services_outlined, size: 18, color: Colors.orange),
+                    SizedBox(width: 8),
+                    Text('Hapus yang Sudah Dibaca'),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
       body: RefreshIndicator(
@@ -723,7 +772,44 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                           separatorBuilder: (_, _) => const Divider(height: 1),
                           itemBuilder: (context, index) {
                             final item = filtered[index];
-                            return _buildNotificationTile(context, item);
+                            return Dismissible(
+                              key: Key(item.id),
+                              direction: DismissDirection.endToStart,
+                              background: Container(
+                                alignment: Alignment.centerRight,
+                                padding: const EdgeInsets.symmetric(horizontal: 20),
+                                color: Colors.red.shade600,
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    Icon(Icons.delete_outline, color: Colors.white),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'Hapus',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              onDismissed: (direction) {
+                                ref.read(notificationsProvider.notifier).deleteNotification(item.id);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Notifikasi "${item.title}" dihapus.'),
+                                    action: SnackBarAction(
+                                      label: 'OK',
+                                      textColor: Colors.white,
+                                      onPressed: () {},
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: _buildNotificationTile(context, item),
+                            );
                           },
                         ),
             ),
