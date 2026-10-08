@@ -79,4 +79,30 @@ export class DoctorsService {
     });
     return this.mapDoctorWithPhoto(updated);
   }
+
+  async uploadAvatar(base64Data: string, originalFileName = 'doctor_avatar.jpg') {
+    const publicDoctorsDir = require('path').join(process.cwd(), 'public', 'doctors');
+    const fs = require('fs');
+    if (!fs.existsSync(publicDoctorsDir)) {
+      fs.mkdirSync(publicDoctorsDir, { recursive: true });
+    }
+
+    const matches = base64Data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    const dataBuffer = matches && matches.length === 3
+      ? Buffer.from(matches[2], 'base64')
+      : Buffer.from(base64Data, 'base64');
+
+    const cleanName = originalFileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const filename = `upload_${Date.now()}_${cleanName}`;
+    const filePath = require('path').join(publicDoctorsDir, filename);
+
+    fs.writeFileSync(filePath, dataBuffer);
+
+    return {
+      url: `/public/doctors/${filename}`,
+      filename,
+      size: dataBuffer.length,
+      success: true,
+    };
+  }
 }

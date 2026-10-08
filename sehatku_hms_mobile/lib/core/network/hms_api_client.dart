@@ -118,6 +118,24 @@ class HmsApiClient {
     }
   }
 
+  Future<String?> uploadDoctorAvatar(String base64Data, [String? fileName]) async {
+    try {
+      final response = await _dio.post(
+        '/doctors/upload-avatar',
+        data: {
+          'base64Data': base64Data,
+          if (fileName != null) 'fileName': fileName,
+        },
+      );
+      if ((response.statusCode == 200 || response.statusCode == 201) && response.data != null) {
+        return response.data['url']?.toString();
+      }
+    } catch (e) {
+      debugPrint('[HmsApiClient] uploadDoctorAvatar error: $e');
+    }
+    return null;
+  }
+
   // --- PATIENTS ---
 
   Future<List<Patient>> getPatients({String? query, String? insurance}) async {

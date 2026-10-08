@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/config/app_env.dart';
+import '../../../../core/providers/api_client_provider.dart';
+import '../../../../core/utils/image_picker_helper.dart';
 import '../../../../shared/models/health_models.dart';
+import '../../../../shared/widgets/doctor_avatar.dart';
 import '../../application/admin_state_providers.dart';
 
 class DoctorFormDialog extends ConsumerStatefulWidget {
@@ -29,6 +32,10 @@ class _DoctorFormDialogState extends ConsumerState<DoctorFormDialog> {
   late List<String> _selectedDays;
   late bool _isActive;
 
+  String? _uploadedFileName;
+  bool _isUploading = false;
+  bool _showManualUrlInput = false;
+
   final List<String> _allDays = [
     'Senin',
     'Selasa',
@@ -36,29 +43,6 @@ class _DoctorFormDialogState extends ConsumerState<DoctorFormDialog> {
     'Kamis',
     'Jumat',
     'Sabtu',
-  ];
-
-  final List<Map<String, String>> _presetAvatars = [
-    {
-      'label': 'dr. Maya (Sp.JP)',
-      'url': '/public/doctors/dr_maya_pratama.jpg',
-    },
-    {
-      'label': 'drg. Rafi (Sp.KG)',
-      'url': '/public/doctors/drg_rafi_akbar.jpg',
-    },
-    {
-      'label': 'dr. Sarah (Sp.A)',
-      'url': '/public/doctors/dr_sarah_olivia.jpg',
-    },
-    {
-      'label': 'dr. Bima (Sp.S)',
-      'url': '/public/doctors/dr_bima_santoso.jpg',
-    },
-    {
-      'label': 'dr. Hendra (Sp.PD)',
-      'url': '/public/doctors/dr_hendra_wijaya.jpg',
-    },
   ];
 
   @override
@@ -92,6 +76,40 @@ class _DoctorFormDialogState extends ConsumerState<DoctorFormDialog> {
     _experienceController.dispose();
     _photoUrlController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickAndUploadPhoto() async {
+    setState(() => _isUploading = true);
+    try {
+      final picked = await pickImageFromDevice();
+      if (picked != null) {
+        setState(() {
+          _photoUrlController.text = picked.dataUrl;
+          _uploadedFileName = picked.name;
+        });
+
+        // Optionally upload to backend server storage in background
+        final serverUrl = await ref
+            .read(apiClientProvider)
+            .uploadDoctorAvatar(picked.dataUrl, picked.name);
+        if (serverUrl != null && serverUrl.isNotEmpty && mounted) {
+          setState(() {
+            _photoUrlController.text = serverUrl;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal memilih foto: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUploading = false);
+    }
   }
 
   void _save() {
@@ -140,7 +158,6 @@ class _DoctorFormDialogState extends ConsumerState<DoctorFormDialog> {
   Widget build(BuildContext context) {
     final departments = ref.watch(adminDepartmentsProvider);
     final isEdit = widget.doctor != null;
-    final resolvedPhotoUrl = AppEnv.resolveMediaUrl(_photoUrlController.text.trim());
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -195,12 +212,12 @@ class _DoctorFormDialogState extends ConsumerState<DoctorFormDialog> {
                 ),
                 const Divider(height: 28),
 
-                // Foto Profil Section
+                // Foto Profil Upload Section
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: Colors.grey.shade300),
                   ),
                   child: Column(
@@ -210,105 +227,112 @@ class _DoctorFormDialogState extends ConsumerState<DoctorFormDialog> {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           // Live Circle Avatar Preview
-                          Container(
-                            width: 64,
-                            height: 64,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Theme.of(context).colorScheme.primary,
-                                width: 2,
-                              ),
-                            ),
-                            child: ClipOval(
-                              child: resolvedPhotoUrl.isNotEmpty
-                                  ? Image.network(
-                                      resolvedPhotoUrl,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => const Icon(
-                                        Icons.person,
-                                        size: 36,
-                                        color: Colors.grey,
-                                      ),
-                                    )
-                                  : const Icon(
-                                      Icons.person,
-                                      size: 36,
-                                      color: Colors.grey,
-                                    ),
-                            ),
+                          DoctorAvatar(
+                            photoUrl: _photoUrlController.text.trim(),
+                            name: _nameController.text.trim(),
+                            radius: 36,
+                            borderWidth: 2.5,
+                            borderColor: Theme.of(context).colorScheme.primary,
                           ),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: 18),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Text(
                                   'Foto Profil Dokter',
-                                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                                 ),
-                                const SizedBox(height: 4),
-                                const Text(
-                                  'Pilih preset foto dokter klinik atau masukkan URL foto kustom',
-                                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                                const SizedBox(height: 3),
+                                Text(
+                                  _uploadedFileName != null
+                                      ? 'File terpilih: $_uploadedFileName'
+                                      : 'Upload foto dokter langsung dari perangkat (JPG, PNG, WEBP)',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: _uploadedFileName != null
+                                        ? Colors.green.shade800
+                                        : Colors.grey.shade600,
+                                    fontWeight: _uploadedFileName != null
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                  ),
                                 ),
-                                const SizedBox(height: 8),
-                                // Preset Avatars Chips
+                                const SizedBox(height: 10),
                                 Wrap(
-                                  spacing: 6,
-                                  runSpacing: 6,
-                                  children: _presetAvatars.map((preset) {
-                                    final isSelected = _photoUrlController.text.trim() == preset['url'];
-                                    return ActionChip(
-                                      avatar: CircleAvatar(
-                                        backgroundImage: NetworkImage(
-                                          AppEnv.resolveMediaUrl(preset['url']!),
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    FilledButton.icon(
+                                      onPressed: _isUploading ? null : _pickAndUploadPhoto,
+                                      icon: _isUploading
+                                          ? const SizedBox(
+                                              width: 14,
+                                              height: 14,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: Colors.white,
+                                              ),
+                                            )
+                                          : const Icon(Icons.cloud_upload_outlined, size: 18),
+                                      label: Text(_isUploading ? 'Memproses...' : 'Upload Foto'),
+                                      style: FilledButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                      ),
+                                    ),
+                                    OutlinedButton.icon(
+                                      onPressed: () => setState(() => _showManualUrlInput = !_showManualUrlInput),
+                                      icon: Icon(_showManualUrlInput ? Icons.link_off : Icons.link, size: 16),
+                                      label: Text(_showManualUrlInput ? 'Tutup URL' : 'Input URL'),
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                      ),
+                                    ),
+                                    if (_photoUrlController.text.isNotEmpty)
+                                      TextButton.icon(
+                                        onPressed: () {
+                                          setState(() {
+                                            _photoUrlController.clear();
+                                            _uploadedFileName = null;
+                                          });
+                                        },
+                                        icon: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
+                                        label: const Text(
+                                          'Hapus Foto',
+                                          style: TextStyle(color: Colors.red, fontSize: 12),
                                         ),
                                       ),
-                                      label: Text(
-                                        preset['label']!,
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                        ),
-                                      ),
-                                      backgroundColor: isSelected
-                                          ? Theme.of(context).colorScheme.primaryContainer
-                                          : null,
-                                      onPressed: () {
-                                        setState(() {
-                                          _photoUrlController.text = preset['url']!;
-                                        });
-                                      },
-                                    );
-                                  }).toList(),
+                                  ],
                                 ),
                               ],
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _photoUrlController,
-                        onChanged: (_) => setState(() {}),
-                        decoration: InputDecoration(
-                          labelText: 'URL Foto Profil (Kustom / Asset)',
-                          hintText: 'https://domain.com/foto.jpg atau /public/doctors/...',
-                          prefixIcon: const Icon(Icons.image_outlined),
-                          suffixIcon: _photoUrlController.text.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear, size: 18),
-                                  onPressed: () {
-                                    _photoUrlController.clear();
-                                    setState(() {});
-                                  },
-                                )
-                              : null,
-                          isDense: true,
-                          border: const OutlineInputBorder(),
+                      if (_showManualUrlInput) ...[
+                        const SizedBox(height: 14),
+                        TextFormField(
+                          controller: _photoUrlController,
+                          onChanged: (_) => setState(() {}),
+                          decoration: InputDecoration(
+                            labelText: 'URL Foto Profil Langsung',
+                            hintText: 'https://example.com/foto.jpg',
+                            prefixIcon: const Icon(Icons.link),
+                            suffixIcon: _photoUrlController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear, size: 18),
+                                    onPressed: () {
+                                      _photoUrlController.clear();
+                                      setState(() {});
+                                    },
+                                  )
+                                : null,
+                            isDense: true,
+                            border: const OutlineInputBorder(),
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),

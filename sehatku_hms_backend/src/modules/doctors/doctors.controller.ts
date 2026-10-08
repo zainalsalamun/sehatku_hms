@@ -49,4 +49,10 @@ export class DoctorsController {
   toggleActive(@Param('id') id: string) {
     return this.doctorsService.toggleActive(id);
   }
+
+  @Post('upload-avatar')
+  @ApiOperation({ summary: 'Upload foto profil dokter (Base64 / Data URL)' })
+  uploadAvatar(@Body() body: { base64Data: string; fileName?: string }) {
+    return this.doctorsService.uploadAvatar(body.base64Data, body.fileName);
+  }
 }

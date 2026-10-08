@@ -62,7 +62,10 @@ abstract final class AppEnv {
       }
     }
 
-    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    if (trimmed.startsWith('data:image/') ||
+        trimmed.startsWith('blob:') ||
+        trimmed.startsWith('http://') ||
+        trimmed.startsWith('https://')) {
       return trimmed;
     }
     if (trimmed.startsWith('/')) {

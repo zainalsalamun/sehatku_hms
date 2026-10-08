@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/models/health_models.dart';
+import '../../../../shared/widgets/doctor_avatar.dart';
 import '../../application/admin_state_providers.dart';
 import '../widgets/admin_table_container.dart';
 import '../widgets/doctor_form_dialog.dart';
@@ -167,25 +168,10 @@ class _AdminDoctorsTabState extends ConsumerState<AdminDoctorsTab> {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    CircleAvatar(
+                    DoctorAvatar(
+                      photoUrl: doc.photoUrl,
+                      name: doc.name,
                       radius: 18,
-                      backgroundColor: AppTheme.navy.withValues(alpha: 0.1),
-                      backgroundImage: doc.displayPhotoUrl.isNotEmpty
-                          ? NetworkImage(doc.displayPhotoUrl)
-                          : null,
-                      onBackgroundImageError: doc.displayPhotoUrl.isNotEmpty
-                          ? (_, _) {}
-                          : null,
-                      child: doc.displayPhotoUrl.isEmpty
-                          ? Text(
-                              doc.name.replaceAll('dr. ', '').substring(0, 1),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.navy,
-                                fontSize: 12,
-                              ),
-                            )
-                          : null,
                     ),
                     const SizedBox(width: 10),
                     Column(
@@ -315,23 +301,10 @@ class _AdminDoctorsTabState extends ConsumerState<AdminDoctorsTab> {
         );
 
         return ListTile(
-          leading: CircleAvatar(
-            backgroundColor: AppTheme.navy.withValues(alpha: 0.1),
-            backgroundImage: doc.displayPhotoUrl.isNotEmpty
-                ? NetworkImage(doc.displayPhotoUrl)
-                : null,
-            onBackgroundImageError: doc.displayPhotoUrl.isNotEmpty
-                ? (_, _) {}
-                : null,
-            child: doc.displayPhotoUrl.isEmpty
-                ? Text(
-                    doc.name.replaceAll('dr. ', '').substring(0, 1),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.navy,
-                    ),
-                  )
-                : null,
+          leading: DoctorAvatar(
+            photoUrl: doc.photoUrl,
+            name: doc.name,
+            radius: 20,
           ),
           title: Text(
             doc.name,

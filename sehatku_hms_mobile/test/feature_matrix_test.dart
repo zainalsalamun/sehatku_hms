@@ -77,8 +77,8 @@ void main() {
     });
   });
 
-  group('Feature 2: Doctor Dynamic Avatar Picker Dialog Tests', () {
-    testWidgets('DoctorFormDialog allows selecting preset avatars or entering custom URL', (tester) async {
+  group('Feature 2: Doctor Real Photo Upload Dialog Tests', () {
+    testWidgets('DoctorFormDialog renders photo upload button and URL toggle', (tester) async {
       await tester.pumpWidget(
         const ProviderScope(
           child: MaterialApp(
@@ -88,14 +88,14 @@ void main() {
       );
 
       expect(find.text('Tambah Dokter Baru'), findsOneWidget);
-      expect(find.text('Foto Profil / Avatar Dokter:'), findsOneWidget);
-      expect(find.text('Preset Avatar'), findsOneWidget);
-      expect(find.text('Custom URL'), findsOneWidget);
+      expect(find.text('Foto Profil Dokter'), findsOneWidget);
+      expect(find.text('Upload Foto'), findsOneWidget);
+      expect(find.text('Input URL'), findsOneWidget);
 
-      // Switch to Custom URL
-      await tester.tap(find.text('Custom URL'));
+      // Toggle Manual URL input
+      await tester.tap(find.text('Input URL'));
       await tester.pumpAndSettle();
-      expect(find.text('URL Foto Dokter (HTTPS Direct Link)'), findsOneWidget);
+      expect(find.text('URL Foto Profil Langsung'), findsOneWidget);
     });
   });
 
