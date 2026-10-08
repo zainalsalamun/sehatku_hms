@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/admin_pagination_footer.dart';
 
 class AdminTableContainer extends StatelessWidget {
   const AdminTableContainer({
@@ -13,6 +14,11 @@ class AdminTableContainer extends StatelessWidget {
     this.actionIcon,
     this.onActionPressed,
     this.badgeCount,
+    this.currentPage,
+    this.totalItems,
+    this.itemsPerPage = 10,
+    this.onPageChanged,
+    this.onItemsPerPageChanged,
   });
 
   final String title;
@@ -25,6 +31,13 @@ class AdminTableContainer extends StatelessWidget {
   final IconData? actionIcon;
   final VoidCallback? onActionPressed;
   final int? badgeCount;
+
+  // Pagination support
+  final int? currentPage;
+  final int? totalItems;
+  final int itemsPerPage;
+  final ValueChanged<int>? onPageChanged;
+  final ValueChanged<int>? onItemsPerPageChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -223,6 +236,16 @@ class AdminTableContainer extends StatelessWidget {
 
           // Content / Table View
           child,
+
+          // Optional Pagination Footer
+          if (currentPage != null && totalItems != null && onPageChanged != null)
+            AdminPaginationFooter(
+              currentPage: currentPage!,
+              totalItems: totalItems!,
+              itemsPerPage: itemsPerPage,
+              onPageChanged: onPageChanged!,
+              onItemsPerPageChanged: onItemsPerPageChanged,
+            ),
         ],
       ),
     );
