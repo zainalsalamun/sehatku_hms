@@ -69,10 +69,23 @@
 - **Flagging Otomatis**: Indikator otomatis untuk hasil *Normal, Low, High, Critical*.
 - **Cetak Hasil Lab A4**: Lembar hasil ber-kop klinik dengan verifikasi penanggung jawab Sp.PK.
 
-### 8.  Laporan Analisis & Export Excel / CSV
+### 8.  Laporan Analisis & Export Dual Format (PDF & CSV)
 - **Laporan LB1 Dinkes**: Rekapitulasi 10 Besar Penyakit dan agregasi gender pasien.
 - **Laporan Keuangan & Kasir**: Download omzet dan rincian transaksi per metode bayar.
 - **Laporan Stok & Valuasi Farmasi**: Mutasi stok, nomor batch, nilai aset persediaan obat.
+
+### 9.  Modul Resume Medis Rawat Inap (Discharge Summary KARS Kemenkes RI)
+- **Lembar Kepulangan Resmi**: Dokumen resume medis rawat inap standar akreditasi KARS ber-Kop Rumah Sakit, QR Code keaslian digital, dan diagnosa awal/akhir.
+- **Tabel Obat Pulang (Home Medications)**: Rincian nama obat, dosis, aturan minum, dan durasi pengobatan.
+- **Jadwal Kontrol Poliklinik**: Penetapan otomatis tanggal kontrol ulang pasca rawat inap.
+
+### 10. Portal Pasien Mandiri & E-Dokumen
+- **Rekam Medis Komprehensif**: Akses 4 tab (Rawat Jalan, Rawat Inap, Surat Sakit / SKD, dan Laboratorium).
+- **Cetak Dokumen Mandiri**: Download PDF resume medis, hasil lab, karcis antrean, dan bukti pelunasan kwitansi kasir.
+
+### 11. Telekonsultasi & Komunikasi Dokter-Pasien
+- **Chat Medis Terenkripsi**: Saluran pesan langsung untuk follow-up terapi dan konsultasi obat.
+- **Doctor Teleconsultation Inbox**: Panel kotak masuk interaktif pada dashboard dokter.
 
 ---
 

@@ -131,8 +131,9 @@ Database seed telah dilengkapi akun uji coba dengan hak akses multi-role:
 | Role Pengguna | Email | Password | Hak Akses Utama |
 | :--- | :--- | :--- | :--- |
 | **Hospital Administrator** | `admin@sehatku.id` | `password123` | Akses penuh seluruh tab admin, pendaftaran pasien walk-in, antrean, kasir POS & shift closing, etiket farmasi, ranap, lab, export laporan Dinkes. |
-| **Dokter Spesialis (dr. Maya)** | `doctor@sehatku.id` | `password123` | Antrean poli, rekam medis SOAP, TTV, ICD-10, resep obat, penerbitan Surat Izin Sakit (SKD) & Surat Sehat ber-QR Code. |
-| **Pasien Terdaftar** | `patient@sehatku.id` | `password123` | Portal booking konsultasi dokter, cek nomor antrean live, download kwitansi bayar dan riwayat medis. |
+| **Dokter Spesialis Jantung (dr. Maya)** | `doctor@sehatku.id` | `password123` | Antrean poli, rekam medis SOAP, TTV, ICD-10, resep obat, penerbitan Surat Izin Sakit (SKD) & Surat Sehat ber-QR Code. |
+| **Dokter Gigi & Mulut (drg. Rafi)** | `rafi@sehatku.id` | `password123` | Konsultasi poli gigi, rekam medis SOAP, tindakan dental, dan peresepan obat. |
+| **Pasien Terdaftar** | `patient@sehatku.id` | `password123` | Portal booking konsultasi dokter, cek nomor antrean live, download kwitansi bayar, resume medis ranap, dan riwayat lab. |
 
 ---
 

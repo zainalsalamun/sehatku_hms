@@ -52,7 +52,7 @@
                   "    var jsonData = pm.response.json();",
                   "    if (jsonData.accessToken) {",
                   "        pm.collectionVariables.set('auth_token', jsonData.accessToken);",
-                  "        console.log('✅ Auth Token berhasil disimpan ke variabel koleksi.');",
+                  "        console.log('[SUCCESS] Auth Token berhasil disimpan ke variabel koleksi.');",
                   "    }",
                   "}"
                 ],

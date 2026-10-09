@@ -97,29 +97,37 @@ flutter run -d <device_id>
 - Beranda Pasien: Menampilkan salam personal, kartu antrean aktif, dan tombol akses cepat.
 - Booking & Pembayaran: Memilih dokter, slot waktu, input keluhan, dan checkout simulasi QRIS.
 - Tab Janji Temu: Filter status reservasi (Aktif, Selesai, Dibatalkan), membuka barcode tiket antrean, dan cetak kwitansi.
-- Tab Rekam Medis: Riwayat kunjungan klinis lengkap dengan tanda vital, diagnosa ICD-10, dan resep obat.
+- Tab Rekam Medis: Riwayat kunjungan klinis lengkap dengan 4 tab: Rawat Jalan, Rawat Inap & Resume Medis Ranap, Surat Keterangan Dokter (SKD), dan Hasil Laboratorium.
+- Tagihan Mandiri: Rincian invoice dan download kwitansi resmi.
+- Telekonsultasi: Chat medis langsung dengan dokter DPJP terenkripsi end-to-end.
 
 ### Role: Dokter Spesialis
-- Dashboard Antrean Live: Counter antrean real-time per dokter spesialis.
+- Dashboard Antrean Live: Counter antrean real-time per dokter spesialis dan tombol panggil suara TTS.
 - Pemeriksaan EMR SOAP:
   - Input anamnesis pasien.
   - Input tanda vital (kalkulasi BMI otomatis).
   - Pencarian katalog resmi ICD-10.
   - Peresepan obat formularium rumah sakit.
-  - Tanda tangan rekam medis dan otomatis meneruskan resep ke Farmasi.
+  - Penerbitan Surat Keterangan Dokter (SKD).
+  - Tanda tangan rekam medis dan otomatis meneruskan resep ke Farmasi serta invoice ke Kasir.
+- Telekonsultasi Inbox: Kotak masuk pesan pasien untuk follow-up pengobatan.
 
-### Role: Hospital Admin / Kasir / Apoteker
+### Role: Hospital Admin / Kasir / Apoteker / Analis Lab
 - Overview Operasional: Metrik pasien, dokter aktif, antrean, dan pendapatan lunas.
-- Kasir POS & Invoice: Pelunasan multi-metode (Tunai, QRIS, Kartu Debit, BPJS) dan generator Kwitansi Resmi PDF.
-- Farmasi & Apotek: Dispensing tracker (Menunggu -> Diracik -> Siap di Loket -> Selesai) dan manajemen stok obat.
+- Kasir POS & Invoice: Buka/Tutup shift kasir, pelunasan multi-metode (Tunai, QRIS, Kartu Debit, BPJS), dan generator Kwitansi Resmi PDF.
+- Farmasi & Apotek: Dispensing tracker (Menunggu -> Diracik -> Siap di Loket -> Selesai), cetak etiket thermal putih/biru, dan manajemen stok obat.
+- Rawat Inap (Ranap): Visual bed floor plan, kalkulasi BOR, admisi ranap, CPPT, pindah kamar, dan resume medis kepulangan.
+- Laboratorium (LIS): Katalog tes, entri hasil lab, deteksi nilai kritis (Normal, Low, High, Critical), dan cetak lembar hasil A4 resmi.
+- Export Laporan Eksekutif: Dual export PDF ber-kop & spreadsheet Excel CSV (LB1 Dinkes, Keuangan, Farmasi, Kunjungan Poli).
 - Audit Trail: Pemantauan log mutasi data immutable.
 
 ---
 
 ## 5. Akun Uji Coba Default
 
-| Peran | Email | Password |
-| :--- | :--- | :--- |
-| Hospital Admin | admin@sehatku.id | password123 |
-| Dokter Spesialis | doctor@sehatku.id | password123 |
-| Pasien | patient@sehatku.id | password123 |
+| Peran | Nama Akun | Email | Password |
+| :--- | :--- | :--- | :--- |
+| **Hospital Admin / Kasir / Farmasi** | Budi Santoso (Admin) | `admin@sehatku.id` | `password123` |
+| **Dokter Spesialis Jantung (DPJP)** | dr. Maya Pratama, Sp.JP | `doctor@sehatku.id` | `password123` |
+| **Dokter Gigi & Mulut** | drg. Rafi Akbar, Sp.KG | `rafi@sehatku.id` | `password123` |
+| **Pasien Terdaftar** | Nadia Putri | `patient@sehatku.id` | `password123` |

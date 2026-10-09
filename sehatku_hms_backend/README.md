@@ -114,6 +114,9 @@ Server aktif pada:
 | Billing | GET | /billing/invoices | Daftar invoice & status pelunasan |
 | Billing | GET | /billing/invoices/:id/receipt-data | Data kwitansi resmi siap cetak PDF |
 | Billing | PATCH | /billing/invoices/:id/pay | Pelunasan tagihan kasir POS multi-metode |
+| Analytics | GET | /analytics/dashboard-summary | Ringkasan omzet, LB1, dan indikator harian |
+| Analytics | GET | /analytics/export-csv | Ekspor laporan Excel (.csv) |
+| Analytics | GET | /analytics/export-report | Ekspor laporan eksekutif resmi (.pdf & .csv) |
 | Audit Logs | GET | /audit-logs | Riwayat audit trail mutasi data |
 
 ---

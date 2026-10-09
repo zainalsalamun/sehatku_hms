@@ -85,12 +85,26 @@ sehatku_hms/
 - Cetak Lembar Hasil Lab Resmi (A4): Format cetak A4 ber-kop rumah sakit, tanda tangan dokter Sp.PK, dan QR Code verifikasi digital.
 - Sinkronisasi Tagihan Kasir: Biaya pemeriksaan diagnostik otomatis masuk ke invoice Kasir POS pasien.
 
-### J. Modul Export Laporan Keuangan, Farmasi, & Laporan LB1 Dinkes ke Excel (.csv)
-- Export Laporan Kasir & Keuangan: Download rincian transaksi harian/bulanan, metode bayar (Tunai, QRIS, Transfer, Debit), status tagihan, dan rekap omzet ke format spreadsheet.
+### J. Modul Export Laporan Keuangan, Farmasi, & Laporan LB1 Dinkes Dual Format (.pdf & .csv)
+- Export Laporan Kasir & Keuangan: Download rincian transaksi harian/bulanan, metode bayar (Tunai, QRIS, Transfer, Debit), status tagihan, dan rekap omzet ke format spreadsheet dan dokumen PDF resmi.
 - Laporan 10 Besar Penyakit (LB1 Dinas Kesehatan): Rekapitulasi agregasi diagnosa ICD-10 dan demografi gender pasien (L/P) sesuai format standar pelaporan Dinas Kesehatan.
 - Laporan Mutasi & Valuasi Stok Farmasi: Export daftar stok obat, nomor batch, minimum stok, harga pokok, harga jual, dan total nilai aset obat apotek.
 - Laporan Kunjungan Pasien Poliklinik: Rekapitulasi antrean kunjungan per dokter DPJP, keluhan, dan penjamin pasien.
 - Format Standar Spreadsheet: Encoding UTF-8 BOM untuk kompatibilitas langsung dengan Microsoft Excel, Google Sheets, dan LibreOffice tanpa kendala formatting.
+
+### K. Modul Resume Medis Rawat Inap (KARS / RME Standar Akreditasi Kemenkes RI)
+- Lembar Discharge Summary Resmi: Pratinjau dan cetak dokumen kepulangan rawat inap standar KARS ber-Kop Rumah Sakit, QR Code otentikasi digital, diagnosa awal/akhir, dan ringkasan riwayat penyakit.
+- Tabel Terapi Obat Pulang (Home Medications): Nama obat, dosis, aturan minum, dan durasi pengobatan yang wajib dihabiskan.
+- Jadwal Kontrol Rawat Jalan: Penetapan tanggal kontrol poliklinik pasca ranap secara otomatis.
+
+### L. Portal Pasien Terintegrasi & Dokumen Medis Mandiri
+- Akses Rekam Medis Komprehensif: 4 tab navigasi (Rawat Jalan, Rawat Inap, Surat Sakit / SKD, dan Hasil Laboratorium).
+- Cetak Dokumen Mandiri: Pasien dapat melihat dan mengunduh berkas resume medis ranap, hasil laboratorium, surat izin sakit resmi, dan tiket antrean langsung dari perangkat mobile mereka.
+- Tagihan & Kwitansi Pasien: Menu rincian invoice, rincian biaya tindakan, obat, dan bukti pelunasan kwitansi resmi kasir.
+
+### M. Telekonsultasi & Pesan Dokter-Pasien
+- Chat Medis Terenkripsi: Jalur komunikasi langsung antara pasien dan dokter DPJP terkait konfirmasi aturan obat dan hasil tes.
+- Kotak Masuk Pesan Dokter (Doctor Teleconsultation Inbox): Notifikasi interaktif di dashboard dokter untuk membalas konsultasi pasien secara cepat.
 
 ---
 
@@ -243,10 +257,17 @@ flutter run -d web-server --web-port=8080
 ---
 
 ### Akun Uji Coba Default (Seed Database):
-| Role | Email | Password |
-| :--- | :--- | :--- |
-| **Hospital Admin** | `admin@sehatku.id` | `password123` |
-| **Dokter Spesialis** | `doctor@sehatku.id` | `password123` |
-| **Pasien** | `patient@sehatku.id` | `password123` |
+| Role | Nama Akun | Email | Password |
+| :--- | :--- | :--- | :--- |
+| **Hospital Admin / Kasir / Farmasi** | Budi Santoso (Admin) | `admin@sehatku.id` | `password123` |
+| **Dokter Spesialis Jantung (DPJP)** | dr. Maya Pratama, Sp.JP | `doctor@sehatku.id` | `password123` |
+| **Dokter Gigi & Mulut** | drg. Rafi Akbar, Sp.KG | `rafi@sehatku.id` | `password123` |
+| **Pasien Terdaftar** | Nadia Putri | `patient@sehatku.id` | `password123` |
+
+Untuk mereset atau mengisi ulang database dengan data uji coba lengkap:
+```bash
+cd sehatku_hms_backend
+npx prisma db seed
+```
 
 Dokumentasi ini disusun sebagai panduan standar operasional sistem Klinik Pratama & Rumah Sakit SehatKu Medika.
