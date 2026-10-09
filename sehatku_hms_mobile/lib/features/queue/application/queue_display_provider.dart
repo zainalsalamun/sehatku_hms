@@ -61,30 +61,9 @@ class QueueDisplayState {
 class QueueDisplayNotifier extends Notifier<QueueDisplayState> {
   @override
   QueueDisplayState build() {
-    return QueueDisplayState(
-      activeCall: ActiveQueueCall(
-        queueNumber: 'A-001',
-        patientName: 'Nadia Putri',
-        destination: 'Poli Kardiologi (Ruang 1)',
-        calledAt: DateTime.now(),
-        isFlashing: false,
-      ),
-      recentCalls: [
-        ActiveQueueCall(
-          queueNumber: 'A-001',
-          patientName: 'Nadia Putri',
-          destination: 'Poli Kardiologi (Ruang 1)',
-          calledAt: DateTime.now().subtract(const Duration(minutes: 5)),
-          isFlashing: false,
-        ),
-        ActiveQueueCall(
-          queueNumber: 'B-001',
-          patientName: 'Raka Mahendra',
-          destination: 'Loket Kasir 1',
-          calledAt: DateTime.now().subtract(const Duration(minutes: 12)),
-          isFlashing: false,
-        ),
-      ],
+    return const QueueDisplayState(
+      activeCall: null,
+      recentCalls: [],
     );
   }
 

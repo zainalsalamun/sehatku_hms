@@ -30,6 +30,7 @@ class _AdminAppointmentsTabState extends ConsumerState<AdminAppointmentsTab> {
     'Menunggu',
     'Terkonfirmasi',
     'Selesai',
+    'Tidak Berlaku',
     'Dibatalkan',
   ];
 
@@ -43,7 +44,11 @@ class _AdminAppointmentsTabState extends ConsumerState<AdminAppointmentsTab> {
           a.doctorName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           a.queueNumber.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           a.department.toLowerCase().contains(_searchQuery.toLowerCase());
-      final matchesStatus = _statusFilter == 'all' || a.status == _statusFilter;
+      final matchesStatus = _statusFilter == 'all'
+          ? true
+          : (_statusFilter == 'Tidak Berlaku'
+              ? (a.isExpired || a.displayStatus == 'Tidak Berlaku')
+              : (!a.isExpired && a.status == _statusFilter));
       return matchesSearch && matchesStatus;
     }).toList();
 
@@ -170,6 +175,10 @@ class _AdminAppointmentsTabState extends ConsumerState<AdminAppointmentsTab> {
         return Colors.blue;
       case 'Selesai':
         return Colors.indigo;
+      case 'Tidak Berlaku':
+      case 'Kadaluarsa':
+      case 'Kedaluwarsa':
+        return Colors.blueGrey;
       case 'Dibatalkan':
         return Colors.red;
       default:
@@ -191,7 +200,7 @@ class _AdminAppointmentsTabState extends ConsumerState<AdminAppointmentsTab> {
           DataColumn(label: Text('Aksi Operasional')),
         ],
         rows: list.map((a) {
-          final color = _getStatusColor(a.status);
+          final color = _getStatusColor(a.displayStatus);
 
           return DataRow(
             cells: [
@@ -274,7 +283,7 @@ class _AdminAppointmentsTabState extends ConsumerState<AdminAppointmentsTab> {
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    a.status,
+                    a.displayStatus,
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
@@ -371,7 +380,7 @@ class _AdminAppointmentsTabState extends ConsumerState<AdminAppointmentsTab> {
       separatorBuilder: (_, _) => const Divider(height: 1),
       itemBuilder: (context, index) {
         final a = list[index];
-        final color = _getStatusColor(a.status);
+        final color = _getStatusColor(a.displayStatus);
 
         return ListTile(
           leading: Container(
@@ -383,7 +392,7 @@ class _AdminAppointmentsTabState extends ConsumerState<AdminAppointmentsTab> {
             child: Text(
               a.queueNumber,
               style: const TextStyle(
-                fontWeight: FontWeight.bold,
+                 fontWeight: FontWeight.bold,
                 color: AppTheme.navy,
               ),
             ),
@@ -403,7 +412,7 @@ class _AdminAppointmentsTabState extends ConsumerState<AdminAppointmentsTab> {
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
-              a.status,
+              a.displayStatus,
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,

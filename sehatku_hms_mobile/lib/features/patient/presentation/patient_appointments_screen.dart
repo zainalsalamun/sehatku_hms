@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/health_models.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../../../shared/widgets/doctor_avatar.dart';
 import '../../../shared/widgets/official_receipt_dialog.dart';
 import '../../admin/application/admin_state_providers.dart';
 import '../../appointment/presentation/interactive_booking_sheet.dart';
@@ -27,7 +28,7 @@ class _PatientAppointmentsScreenState
     {'key': 'all', 'label': 'Semua'},
     {'key': 'active', 'label': 'Aktif / Menunggu'},
     {'key': 'completed', 'label': 'Selesai'},
-    {'key': 'cancelled', 'label': 'Dibatalkan'},
+    {'key': 'cancelled', 'label': 'Tidak Berlaku / Batal'},
   ];
 
   @override
@@ -60,15 +61,20 @@ class _PatientAppointmentsScreenState
 
     final filteredAppointments = sourceAppointments.where((a) {
       if (_selectedFilter == 'active') {
-        return a.status == 'Terkonfirmasi' ||
-            a.status == 'Menunggu' ||
-            a.status == 'Checked-in';
+        return !a.isExpired &&
+            (a.status == 'Terkonfirmasi' ||
+                a.status == 'Menunggu' ||
+                a.status == 'Checked-in');
       }
       if (_selectedFilter == 'completed') {
         return a.status == 'Selesai';
       }
       if (_selectedFilter == 'cancelled') {
-        return a.status == 'Dibatalkan';
+        return a.isExpired ||
+            a.status == 'Dibatalkan' ||
+            a.status == 'Tidak Berlaku' ||
+            a.status == 'Kadaluarsa' ||
+            a.status == 'Kedaluwarsa';
       }
       return true;
     }).toList();
@@ -105,15 +111,20 @@ class _PatientAppointmentsScreenState
                       ? myAppointments.length
                       : myAppointments.where((a) {
                           if (tab['key'] == 'active') {
-                            return a.status == 'Terkonfirmasi' ||
-                                a.status == 'Menunggu' ||
-                                a.status == 'Checked-in';
+                            return !a.isExpired &&
+                                (a.status == 'Terkonfirmasi' ||
+                                    a.status == 'Menunggu' ||
+                                    a.status == 'Checked-in');
                           }
                           if (tab['key'] == 'completed') {
                             return a.status == 'Selesai';
                           }
                           if (tab['key'] == 'cancelled') {
-                            return a.status == 'Dibatalkan';
+                            return a.isExpired ||
+                                a.status == 'Dibatalkan' ||
+                                a.status == 'Tidak Berlaku' ||
+                                a.status == 'Kadaluarsa' ||
+                                a.status == 'Kedaluwarsa';
                           }
                           return true;
                         }).length;
@@ -184,25 +195,40 @@ class _PatientAppointmentsScreenState
   }
 
   Widget _buildAppointmentCard(BuildContext context, Appointment appt) {
-    final statusBg = AppColors.getStatusBg(appt.status);
-    final statusText = AppColors.getStatusText(appt.status);
+    final displayStatus = appt.displayStatus;
+    final statusBg = AppColors.getStatusBg(displayStatus);
+    final statusText = AppColors.getStatusText(displayStatus);
     IconData statusIcon;
 
-    switch (appt.status) {
-      case 'Checked-in':
-        statusIcon = Icons.check_circle_outline;
-        break;
-      case 'Selesai':
-        statusIcon = Icons.task_alt;
-        break;
-      case 'Dibatalkan':
-        statusIcon = Icons.cancel_outlined;
-        break;
-      default:
-        statusIcon = Icons.access_time;
+    if (appt.isExpired) {
+      statusIcon = Icons.event_busy;
+    } else {
+      switch (appt.status) {
+        case 'Checked-in':
+          statusIcon = Icons.check_circle_outline;
+          break;
+        case 'Selesai':
+          statusIcon = Icons.task_alt;
+          break;
+        case 'Dibatalkan':
+          statusIcon = Icons.cancel_outlined;
+          break;
+        default:
+          statusIcon = Icons.access_time;
+      }
     }
 
-    final isPast = appt.status == 'Selesai' || appt.status == 'Dibatalkan';
+    final isPast = appt.status == 'Selesai' || appt.status == 'Dibatalkan' || appt.isExpired;
+    final doctors = ref.watch(adminDoctorsProvider);
+    final matchingDoctor = doctors.cast<Doctor?>().firstWhere(
+      (d) =>
+          d?.name.trim().toLowerCase() == appt.doctorName.trim().toLowerCase() ||
+          (appt.doctorName.toLowerCase().contains(d?.name.toLowerCase() ?? '---')),
+      orElse: () => null,
+    );
+    final resolvedPhotoUrl = appt.doctorPhotoUrl.trim().isNotEmpty
+        ? appt.doctorPhotoUrl.trim()
+        : (matchingDoctor?.photoUrl.trim() ?? '');
 
     return Card(
       margin: const EdgeInsets.only(bottom: 14),
@@ -223,24 +249,12 @@ class _PatientAppointmentsScreenState
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
+                DoctorAvatar(
+                  photoUrl: resolvedPhotoUrl,
+                  name: appt.doctorName,
                   radius: 24,
-                  backgroundColor: isPast
-                      ? AppColors.grey200
-                      : AppColors.primaryOverlay12,
-                  backgroundImage: appt.displayDoctorPhotoUrl.isNotEmpty
-                      ? NetworkImage(appt.displayDoctorPhotoUrl)
-                      : null,
-                  onBackgroundImageError: appt.displayDoctorPhotoUrl.isNotEmpty
-                      ? (_, _) {}
-                      : null,
-                  child: appt.displayDoctorPhotoUrl.isEmpty
-                      ? Icon(
-                          Icons.person,
-                          color: isPast ? AppColors.grey600 : AppTheme.primary,
-                          size: 24,
-                        )
-                      : null,
+                  borderColor: isPast ? AppColors.grey300 : AppTheme.primary,
+                  borderWidth: 1.5,
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -279,7 +293,7 @@ class _PatientAppointmentsScreenState
                       Icon(statusIcon, color: statusText, size: 13),
                       const SizedBox(width: 4),
                       Text(
-                        appt.status,
+                        displayStatus,
                         style: TextStyle(
                           color: statusText,
                           fontSize: 11,
@@ -322,6 +336,34 @@ class _PatientAppointmentsScreenState
                 ),
               ],
             ),
+            if (appt.isExpired) ...[
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.red.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.event_busy, size: 16, color: Colors.red.shade700),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Reservasi ini sudah tidak berlaku karena telah melewati hari H pelaksanaan.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.red.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             if (appt.reason.isNotEmpty) ...[
               const SizedBox(height: 10),
               Container(

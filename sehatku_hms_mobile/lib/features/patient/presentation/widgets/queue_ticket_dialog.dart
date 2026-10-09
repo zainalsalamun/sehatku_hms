@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/document_template_helper.dart';
+import '../../../../core/utils/print_helper.dart';
 import '../../../../shared/models/health_models.dart';
 import '../../../admin/application/admin_state_providers.dart';
 
@@ -29,12 +32,12 @@ class _QueueTicketDialogState extends ConsumerState<QueueTicketDialog> {
     _status = widget.appointment.status;
   }
 
-  bool get _isExpired {
-    final date = widget.appointment.dateLabel.toLowerCase();
-    return _status == 'Kadaluarsa' ||
-        date.contains('kemarin') ||
-        date.contains('terlewat');
-  }
+  bool get _isExpired =>
+      widget.appointment.isExpired ||
+      _status == 'Kadaluarsa' ||
+      _status == 'Kedaluwarsa' ||
+      _status == 'Tidak Berlaku' ||
+      _status == 'Hangus';
 
   bool get _isSelesai => _status == 'Selesai';
   bool get _isDibatalkan => _status == 'Dibatalkan';
@@ -329,22 +332,69 @@ class _QueueTicketDialogState extends ConsumerState<QueueTicketDialog> {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          Icon(
-                            _isExpired
-                                ? Icons.history_toggle_off_rounded
-                                : (_isDibatalkan
-                                      ? Icons.cancel_outlined
-                                      : (_isSelesai
-                                            ? Icons.task_alt_rounded
-                                            : Icons.qr_code_2)),
-                            size: 130,
-                            color: _isExpired
-                                ? AppColors.grey400
-                                : (_isDibatalkan
-                                      ? AppColors.error
-                                      : (_isSelesai
-                                            ? AppColors.info
-                                            : Colors.black)),
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: _isExpired
+                                    ? AppColors.grey300
+                                    : (_isDibatalkan
+                                        ? AppColors.errorBorder
+                                        : AppColors.grey200),
+                              ),
+                            ),
+                            child: _isExpired
+                                ? Opacity(
+                                    opacity: 0.35,
+                                    child: QrImageView(
+                                      data: widget.appointment.displayReservationNumber,
+                                      version: QrVersions.auto,
+                                      size: 140.0,
+                                      gapless: false,
+                                      eyeStyle: const QrEyeStyle(
+                                        eyeShape: QrEyeShape.square,
+                                        color: AppColors.grey400,
+                                      ),
+                                      dataModuleStyle: const QrDataModuleStyle(
+                                        dataModuleShape: QrDataModuleShape.square,
+                                        color: AppColors.grey400,
+                                      ),
+                                    ),
+                                  )
+                                : _isDibatalkan
+                                    ? Opacity(
+                                        opacity: 0.35,
+                                        child: QrImageView(
+                                          data: widget.appointment.displayReservationNumber,
+                                          version: QrVersions.auto,
+                                          size: 140.0,
+                                          gapless: false,
+                                          eyeStyle: const QrEyeStyle(
+                                            eyeShape: QrEyeShape.square,
+                                            color: AppColors.error,
+                                          ),
+                                          dataModuleStyle: const QrDataModuleStyle(
+                                            dataModuleShape: QrDataModuleShape.square,
+                                            color: AppColors.error,
+                                          ),
+                                        ),
+                                      )
+                                    : QrImageView(
+                                        data: widget.appointment.displayReservationNumber,
+                                        version: QrVersions.auto,
+                                        size: 140.0,
+                                        gapless: false,
+                                        eyeStyle: const QrEyeStyle(
+                                          eyeShape: QrEyeShape.square,
+                                          color: Colors.black87,
+                                        ),
+                                        dataModuleStyle: const QrDataModuleStyle(
+                                          dataModuleShape: QrDataModuleShape.square,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
                           ),
                           const SizedBox(height: 8),
                           Text(
@@ -400,6 +450,33 @@ class _QueueTicketDialogState extends ConsumerState<QueueTicketDialog> {
               ),
 
               const SizedBox(height: 20),
+
+              OutlinedButton.icon(
+                onPressed: () {
+                  final html = DocumentTemplateHelper.generateQueueTicketHtml(
+                    queueNumber: widget.appointment.queueNumber,
+                    patientName: widget.appointment.patientName,
+                    doctorName: widget.appointment.doctorName,
+                    department: widget.appointment.department,
+                    dateLabel: widget.appointment.dateLabel,
+                    time: widget.appointment.time,
+                    status: _status,
+                  );
+                  printHtmlDocument(
+                    title: 'Karcis Antrean ${widget.appointment.queueNumber} - ${widget.appointment.patientName}',
+                    htmlContent: html,
+                  );
+                },
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                icon: const Icon(Icons.print_outlined, size: 18),
+                label: const Text('Cetak Karcis Antrean (Thermal / PDF)'),
+              ),
+              const SizedBox(height: 10),
 
               // Action Check-in Button or Close Button
               if (_canCheckIn)
@@ -485,14 +562,14 @@ class _QueueTicketDialogState extends ConsumerState<QueueTicketDialog> {
       subtitle =
           'Reservasi ini telah dibatalkan sehingga tidak dapat check-in.';
     } else {
-      // Expired / Terlewat
-      bg = Colors.amber.shade50;
-      border = Colors.amber.shade300;
-      text = Colors.amber.shade900;
-      icon = Icons.warning_amber_rounded;
-      title = 'Jadwal Telah Terlewat (Kadaluarsa)';
+      // Expired / Terlewat / Tidak Berlaku
+      bg = Colors.red.shade50;
+      border = Colors.red.shade200;
+      text = Colors.red.shade900;
+      icon = Icons.event_busy;
+      title = 'Reservasi Tidak Berlaku (Lewat Hari H)';
       subtitle =
-          'Waktu reservasi telah berakhir dan tidak dilakukan check-in. Silakan pesan reservasi baru.';
+          'Jadwal reservasi ini telah melewati hari H pelaksanaan dan sudah tidak dapat digunakan lagi. Silakan buat reservasi baru.';
     }
 
     return Container(
@@ -582,7 +659,7 @@ class _QueueTicketDialogState extends ConsumerState<QueueTicketDialog> {
   }
 
   String _getStatusDisplay() {
-    if (_isExpired) return 'Kadaluarsa / Terlewat';
+    if (_isExpired) return 'Tidak Berlaku (Lewat Hari H)';
     return _status;
   }
 

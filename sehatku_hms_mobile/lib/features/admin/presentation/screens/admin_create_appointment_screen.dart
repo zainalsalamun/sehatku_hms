@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/utils/document_template_helper.dart';
+import '../../../../core/utils/print_helper.dart';
 import '../../../../core/utils/uuid_helper.dart';
 import '../../../../shared/models/health_models.dart';
 import '../../../notification/application/notifications_provider.dart';
@@ -51,39 +53,6 @@ class _AdminCreateAppointmentScreenState
       'Checked-in'; // 'Checked-in', 'Menunggu', 'Terkonfirmasi'
 
   bool _isSubmitting = false;
-
-  final List<String> _timeSlots = [
-    '08:00',
-    '08:30',
-    '09:00',
-    '09:30',
-    '10:00',
-    '10:30',
-    '11:00',
-    '11:30',
-    '13:00',
-    '13:30',
-    '14:00',
-    '14:30',
-    '15:00',
-    '15:30',
-    '16:00',
-    '16:30',
-    '18:30',
-    '19:00',
-    '19:30',
-    '20:00',
-  ];
-
-  final List<String> _quickReasons = [
-    'Konsultasi Rutin',
-    'Demam & Flu',
-    'Nyeri Dada & Sesak',
-    'Pemeriksaan Gigi',
-    'Kontrol Pasca Rawat',
-    'Pusing / Sakit Kepala',
-    'Medical Checkup',
-  ];
 
   @override
   void initState() {
@@ -709,8 +678,9 @@ class _AdminCreateAppointmentScreenState
                         label: Text(dept.name),
                         selected: isSel,
                         onSelected: (sel) {
-                          if (sel)
+                          if (sel) {
                             setState(() => _selectedDeptFilter = dept.name);
+                          }
                         },
                       ),
                     );
@@ -881,6 +851,10 @@ class _AdminCreateAppointmentScreenState
   // ===================== WIDGET: STEP 3 - SCHEDULE & REASON =====================
 
   Widget _buildScheduleAndReasonCard(String dateLabel) {
+    final slotConfig = ref.watch(appointmentSlotConfigProvider);
+    final timeSlots = slotConfig.timeSlots;
+    final quickReasons = slotConfig.quickReasons;
+
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -923,13 +897,15 @@ class _AdminCreateAppointmentScreenState
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                     onPressed: () async {
+                      final now = DateTime.now();
+                      final today = DateTime(now.year, now.month, now.day);
                       final picked = await showDatePicker(
                         context: context,
-                        initialDate: _selectedDate,
-                        firstDate: DateTime.now().subtract(
-                          const Duration(days: 1),
-                        ),
-                        lastDate: DateTime.now().add(const Duration(days: 30)),
+                        initialDate: _selectedDate.isBefore(today)
+                            ? today
+                            : _selectedDate,
+                        firstDate: today,
+                        lastDate: today.add(const Duration(days: 30)),
                       );
                       if (picked != null) {
                         setState(() => _selectedDate = picked);
@@ -975,7 +951,7 @@ class _AdminCreateAppointmentScreenState
             Wrap(
               spacing: 6,
               runSpacing: 6,
-              children: _timeSlots.map((slot) {
+              children: timeSlots.map((slot) {
                 final isSel = _selectedTime == slot;
                 return ChoiceChip(
                   label: Text('$slot WIB'),
@@ -1000,7 +976,7 @@ class _AdminCreateAppointmentScreenState
             const SizedBox(height: 6),
             Wrap(
               spacing: 6,
-              children: _quickReasons.map((r) {
+              children: quickReasons.map((r) {
                 return ActionChip(
                   label: Text(r, style: const TextStyle(fontSize: 10)),
                   onPressed: () => setState(() => _reasonCtrl.text = r),
@@ -1301,6 +1277,8 @@ class _AdminCreateAppointmentScreenState
       queueNumber: queueNumber,
       department: deptName,
       reason: _reasonCtrl.text.trim(),
+      appointmentDate: _selectedDate,
+      doctorPhotoUrl: doctor.photoUrl,
     );
 
     ref
@@ -1323,13 +1301,24 @@ class _AdminCreateAppointmentScreenState
             label: 'Cetak Karcis',
             textColor: Colors.white,
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Mencetak karcis antrean $queueNumber ke printer thermal 58mm...',
-                  ),
-                  backgroundColor: Colors.teal,
-                ),
+              final html = DocumentTemplateHelper.generateQueueTicketHtml(
+                queueNumber: queueNumber,
+                patientName: finalPatientName,
+                patientMrn: _patientTab == 0
+                    ? (_selectedPatient?.medicalRecordNumber ?? '')
+                    : '',
+                doctorName: doctor.name,
+                department: deptName,
+                dateLabel: dateLabel,
+                time: _selectedTime,
+                insurance: _patientTab == 0
+                    ? (_selectedPatient?.insuranceProvider ?? 'Umum / Mandiri')
+                    : _newInsurance,
+                status: _initialStatus,
+              );
+              printHtmlDocument(
+                title: 'Karcis Antrean $queueNumber - $finalPatientName',
+                htmlContent: html,
               );
             },
           ),

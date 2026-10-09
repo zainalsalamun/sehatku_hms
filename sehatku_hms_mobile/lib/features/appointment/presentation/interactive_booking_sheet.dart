@@ -46,28 +46,10 @@ class InteractiveBookingSheet extends ConsumerStatefulWidget {
 
 class _InteractiveBookingSheetState
     extends ConsumerState<InteractiveBookingSheet> {
-  late Doctor _selectedDoctor;
+  Doctor? _selectedDoctor;
   int _selectedDateIndex = 0;
   String _selectedSlot = '09:30';
   final _reasonController = TextEditingController();
-
-  final List<String> _morningSlots = [
-    '08:30',
-    '09:00',
-    '09:30',
-    '10:00',
-    '10:30',
-    '11:00',
-  ];
-
-  final List<String> _afternoonSlots = [
-    '13:30',
-    '14:00',
-    '14:30',
-    '15:00',
-    '15:30',
-    '16:00',
-  ];
 
   late List<DateTime> _availableDates;
 
@@ -80,18 +62,7 @@ class _InteractiveBookingSheetState
     );
     final docs = ref.read(adminDoctorsProvider);
     _selectedDoctor =
-        widget.initialDoctor ??
-        (docs.isNotEmpty
-            ? docs.first
-            : const Doctor(
-                id: 'd1',
-                name: 'dr. Maya Pratama, Sp.JP',
-                specialist: 'Kardiologi & Vaskular',
-                hospital: 'SehatKu Medical Center',
-                experience: 12,
-                rating: 4.9,
-                availableToday: true,
-              ));
+        widget.initialDoctor ?? (docs.isNotEmpty ? docs.first : null);
   }
 
   @override
@@ -107,6 +78,15 @@ class _InteractiveBookingSheetState
     final billingNotifier = ref.read(adminBillingProvider.notifier);
     final currentAppts = ref.read(adminAppointmentsProvider);
     final doctor = _selectedDoctor;
+    if (doctor == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Silakan pilih dokter terlebih dahulu.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
     final slot = _selectedSlot;
     final reason = _reasonController.text.trim().isNotEmpty
         ? _reasonController.text.trim()
@@ -153,6 +133,8 @@ class _InteractiveBookingSheetState
             queueNumber: queueNum,
             department: doctor.specialist,
             reason: reason,
+            appointmentDate: selectedDate,
+            doctorPhotoUrl: doctor.photoUrl,
           );
 
           appointmentsNotifier.addAppointment(
@@ -208,6 +190,20 @@ class _InteractiveBookingSheetState
   @override
   Widget build(BuildContext context) {
     final doctors = ref.watch(adminDoctorsProvider);
+    if (_selectedDoctor == null && doctors.isNotEmpty) {
+      _selectedDoctor = widget.initialDoctor ?? doctors.first;
+    }
+    final slotConfig = ref.watch(appointmentSlotConfigProvider);
+    final timeSlots = slotConfig.timeSlots;
+    final quickReasons = slotConfig.quickReasons;
+    final morningSlots = timeSlots.where((s) {
+      final hour = int.tryParse(s.split(':').first) ?? 9;
+      return hour < 12;
+    }).toList();
+    final afternoonSlots = timeSlots.where((s) {
+      final hour = int.tryParse(s.split(':').first) ?? 13;
+      return hour >= 12;
+    }).toList();
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -254,8 +250,9 @@ class _InteractiveBookingSheetState
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
-              initialValue: _selectedDoctor.id,
+              value: _selectedDoctor?.id,
               isExpanded: true,
+              hint: Text(doctors.isEmpty ? 'Memuat data dokter...' : 'Pilih Dokter'),
               decoration: const InputDecoration(
                 isDense: true,
                 border: OutlineInputBorder(),
@@ -370,7 +367,7 @@ class _InteractiveBookingSheetState
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: _morningSlots.map((slot) {
+              children: morningSlots.map((slot) {
                 final isSelected = _selectedSlot == slot;
                 return ChoiceChip(
                   label: Text('$slot WIB'),
@@ -395,7 +392,7 @@ class _InteractiveBookingSheetState
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: _afternoonSlots.map((slot) {
+              children: afternoonSlots.map((slot) {
                 final isSelected = _selectedSlot == slot;
                 return ChoiceChip(
                   label: Text('$slot WIB'),
@@ -417,6 +414,16 @@ class _InteractiveBookingSheetState
                     'Contoh: Nyeri dada saat berolahraga, migrain berulang...',
                 border: OutlineInputBorder(),
               ),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              children: quickReasons.map((r) {
+                return ActionChip(
+                  label: Text(r, style: const TextStyle(fontSize: 11)),
+                  onPressed: () => setState(() => _reasonController.text = r),
+                );
+              }).toList(),
             ),
 
             const SizedBox(height: 22),

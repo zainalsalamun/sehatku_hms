@@ -6,7 +6,15 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/health_models.dart';
 import '../../../shared/widgets/official_receipt_dialog.dart';
 import '../../admin/application/admin_state_providers.dart';
+import '../../authentication/application/auth_controller.dart';
+import '../../doctor/presentation/clinical_encounter_screen.dart';
+import '../../inpatient/application/inpatient_state_providers.dart';
+import '../../inpatient/presentation/widgets/inpatient_cppt_dialog.dart';
+import '../../laboratory/application/laboratory_state_providers.dart';
+import '../../laboratory/presentation/widgets/lab_result_print_dialog.dart';
+import '../../medical_record/application/certificates_provider.dart';
 import '../../medical_record/application/medical_records_provider.dart';
+import '../../medical_record/presentation/widgets/medical_certificate_dialog.dart';
 import '../../patient/presentation/widgets/queue_ticket_dialog.dart';
 import '../../pharmacy/application/pharmacy_state_providers.dart';
 import '../application/notifications_provider.dart';
@@ -41,6 +49,13 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         return Icons.receipt_long_rounded;
       case 'clinical':
         return Icons.assignment_turned_in_rounded;
+      case 'lab':
+        return Icons.biotech_rounded;
+      case 'certificate':
+      case 'skd':
+        return Icons.description_rounded;
+      case 'inpatient':
+        return Icons.hotel_rounded;
       case 'emergency':
         return Icons.emergency_rounded;
       default:
@@ -58,6 +73,13 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         return Colors.green;
       case 'clinical':
         return AppTheme.primary;
+      case 'lab':
+        return Colors.indigo;
+      case 'certificate':
+      case 'skd':
+        return Colors.teal;
+      case 'inpatient':
+        return Colors.deepPurple;
       case 'emergency':
         return Colors.red;
       default:
@@ -68,13 +90,20 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   String _getTypeLabel(String type) {
     switch (type) {
       case 'appointment':
-        return 'Reservasi Dokter';
+        return 'Reservasi & Antrean Poli';
       case 'prescription':
-        return 'Instalasi Farmasi';
+        return 'Instalasi Farmasi & Obat';
       case 'billing':
         return 'Kasir & Pembayaran';
       case 'clinical':
-        return 'Rekam Medis EMR';
+        return 'Rekam Medis (EMR)';
+      case 'lab':
+        return 'Hasil Laboratorium';
+      case 'certificate':
+      case 'skd':
+        return 'Surat Keterangan Sakit';
+      case 'inpatient':
+        return 'Rawat Inap & DPJP';
       case 'emergency':
         return 'Peringatan Darurat';
       default:
@@ -102,6 +131,16 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       case 'prescription':
         _openPrescriptionDetail(context, item);
         break;
+      case 'lab':
+        _openLabDetail(context, item);
+        break;
+      case 'certificate':
+      case 'skd':
+        _openCertificateDetail(context, item);
+        break;
+      case 'inpatient':
+        _openInpatientDetail(context, item);
+        break;
       default:
         _showSystemNoticeDialog(context, item);
         break;
@@ -110,23 +149,124 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
   void _openAppointmentDetail(BuildContext context, AppNotification item) {
     final appointments = ref.read(adminAppointmentsProvider);
-    final appt = appointments.firstWhere(
+    var matches = appointments.where(
       (a) => a.id == item.targetId || a.queueNumber == item.targetId,
-      orElse: () => appointments.isNotEmpty
-          ? appointments.first
-          : Appointment(
-              id: item.targetId ?? 'a1',
-              patientName: 'Nadia Putri',
-              doctorName: 'dr. Maya Pratama, Sp.JP',
-              department: 'Kardiologi & Vaskular',
-              queueNumber: 'A-001',
-              dateLabel: 'Hari Ini',
-              time: '09:30 WIB',
-              status: 'Terkonfirmasi',
-              reason: 'Pemeriksaan Rutin Jantung',
-            ),
-    );
+    ).toList();
 
+    if (matches.isEmpty) {
+      matches = appointments.where((a) {
+        return item.message.contains(a.queueNumber) ||
+            item.title.contains(a.queueNumber) ||
+            item.message.toLowerCase().contains(a.patientName.toLowerCase());
+      }).toList();
+    }
+
+    if (matches.isEmpty) {
+      _showSystemNoticeDialog(
+        context,
+        item,
+        fallbackNotice: 'Data reservasi/antrean pasien terkait tidak ditemukan atau telah diarsipkan.',
+      );
+      return;
+    }
+
+    final appt = matches.first;
+    final auth = ref.read(authControllerProvider);
+
+    // If logged in as Doctor and appointment is active/waiting, provide direct EMR SOAP option
+    if (auth.role == UserRole.doctor) {
+      final patients = ref.read(adminPatientsProvider);
+      final patient = patients.where((p) => p.name == appt.patientName).firstOrNull;
+
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.white,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (sheetCtx) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.person_pin_circle_outlined, color: Colors.blue),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            appt.patientName,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                          Text(
+                            'Antrean ${appt.queueNumber} • ${appt.time} • Status: ${appt.status}',
+                            style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const Divider(height: 24),
+                Text('Keluhan Pasien: ${appt.reason}', style: const TextStyle(fontSize: 13)),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.confirmation_number_outlined),
+                        label: const Text('Lihat Antrean'),
+                        onPressed: () {
+                          Navigator.pop(sheetCtx);
+                          showDialog(
+                            context: context,
+                            builder: (_) => QueueTicketDialog(appointment: appt),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton.icon(
+                        style: FilledButton.styleFrom(backgroundColor: AppTheme.primary),
+                        icon: const Icon(Icons.assignment_turned_in_outlined),
+                        label: const Text('Buka SOAP (EMR)'),
+                        onPressed: () {
+                          Navigator.pop(sheetCtx);
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => ClinicalEncounterScreen(
+                                appointment: appt,
+                                patient: patient,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+
+    // Default for Patient and Admin
     showDialog(
       context: context,
       builder: (_) => QueueTicketDialog(appointment: appt),
@@ -134,50 +274,87 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   }
 
   void _openBillingDetail(BuildContext context, AppNotification item) {
-    final billing = ref.read(adminBillingProvider);
-    final inv = billing.firstWhere(
-      (b) => b.id == item.targetId || b.invoiceNumber == item.targetId,
-      orElse: () => billing.isNotEmpty
-          ? billing.first
-          : Invoice(
-              id: item.targetId ?? 'inv-1',
-              invoiceNumber: 'INV-2026-001',
-              patientName: 'Nadia Putri',
-              patientMrn: 'MRN-2026-001',
-              doctorName: 'dr. Maya Pratama, Sp.JP',
-              serviceName: 'Konsultasi Poli Kardiologi & Vaskular',
-              amount: 350000,
-              status: 'Lunas',
-              createdAt: DateTime.now(),
-              paymentMethod: 'QRIS Dinamis',
-              paidAt: DateTime.now(),
-            ),
-    );
+    final billings = ref.read(adminBillingProvider);
+    final matchInvoice = billings.where(
+      (inv) => inv.id == item.targetId || inv.invoiceNumber == item.targetId,
+    ).firstOrNull;
 
-    showOfficialReceiptDialog(context, inv);
+    if (matchInvoice != null) {
+      showOfficialReceiptDialog(context, matchInvoice);
+      return;
+    }
+
+    if (billings.isNotEmpty) {
+      showOfficialReceiptDialog(context, billings.first);
+      return;
+    }
+
+    _showSystemNoticeDialog(
+      context,
+      item,
+      fallbackNotice: 'Lembar rincian tagihan atau kuitansi sedang disinkronkan.',
+    );
   }
 
   void _openClinicalDetail(BuildContext context, AppNotification item) {
+    // 1. Check if targetId matches an EMR record
     final records = ref.read(medicalRecordsProvider);
-    final record = records.firstWhere(
-      (r) => r.id == item.targetId,
-      orElse: () => records.isNotEmpty
-          ? records.first
-          : MedicalRecord(
-              id: item.targetId ?? 'mr-1',
-              date: DateFormat('d MMMM yyyy', 'id_ID').format(DateTime.now()),
-              doctor: 'dr. Maya Pratama, Sp.JP',
-              specialist: 'Kardiologi & Vaskular',
-              diagnosis: 'Hipertensi Primer Esensial (ICD-10: I10)',
-              medicine: 'Candesartan 8mg (1x1), Amlodipine 5mg (1x1)',
-              anamnesis:
-                  'Pasien kontrol rutin tensi darah, mengeluhkan pusing ringan di area tengkuk saat beraktivitas berat.',
-              physicalExam:
-                  'Tekanan Darah: 135/85 mmHg, Nadi: 78x/mnt, RR: 18x/mnt, Suhu: 36.6 C, SpO2: 99%',
-              status: 'signed',
-            ),
-    );
+    final matchRecord = records.where((r) => r.id == item.targetId).firstOrNull;
+    if (matchRecord != null) {
+      _showEMRDialog(context, matchRecord);
+      return;
+    }
 
+    // 2. Check if targetId matches a Medical Certificate (SKD)
+    final certs = ref.read(medicalCertificatesProvider);
+    final matchCert = certs.where(
+      (c) => c.id == item.targetId || c.certificateNumber == item.targetId,
+    ).firstOrNull;
+    if (matchCert != null) {
+      showMedicalCertificateDialog(context, matchCert);
+      return;
+    }
+
+    // 3. Check if targetId matches a Lab Order
+    final labs = ref.read(labOrdersProvider);
+    final matchLab = labs.where(
+      (l) => l.id == item.targetId || l.orderNumber == item.targetId,
+    ).firstOrNull;
+    if (matchLab != null) {
+      showDialog(
+        context: context,
+        builder: (_) => LabResultPrintDialog(order: matchLab),
+      );
+      return;
+    }
+
+    // 4. Check if targetId matches an appointment for clinical consultation
+    final appts = ref.read(adminAppointmentsProvider);
+    final matchAppt = appts.where(
+      (a) => a.id == item.targetId || a.queueNumber == item.targetId,
+    ).firstOrNull;
+    if (matchAppt != null) {
+      final patients = ref.read(adminPatientsProvider);
+      final patient = patients.where((p) => p.name == matchAppt.patientName).firstOrNull;
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => ClinicalEncounterScreen(
+            appointment: matchAppt,
+            patient: patient,
+          ),
+        ),
+      );
+      return;
+    }
+
+    _showSystemNoticeDialog(
+      context,
+      item,
+      fallbackNotice: 'Lembar medis terkait sedang dalam sinkronisasi atau diarsipkan.',
+    );
+  }
+
+  void _showEMRDialog(BuildContext context, MedicalRecord record) {
     showDialog(
       context: context,
       builder: (dialogCtx) => Dialog(
@@ -293,48 +470,36 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   }
 
   void _openPrescriptionDetail(BuildContext context, AppNotification item) {
+    // 1. Check in pharmacyPrescriptionsProvider
     final prescriptions = ref.read(pharmacyPrescriptionsProvider);
-    final rx = prescriptions.firstWhere(
+    final matchRx = prescriptions.where(
       (p) => p.id == item.targetId || p.prescriptionNumber == item.targetId,
-      orElse: () => prescriptions.isNotEmpty
-          ? prescriptions.first
-          : PharmacyPrescription(
-              id: item.targetId ?? '70000000-0000-4000-8000-000000000001',
-              prescriptionNumber: 'RX-2026-001',
-              patientId: '40000000-0000-4000-8000-000000000001',
-              patientName: 'Nadia Putri',
-              patientMrn: 'MRN-2026-001',
-              insurance: 'BPJS Kesehatan Mandiri',
-              doctorId: '30000000-0000-4000-8000-000000000001',
-              doctorName: 'dr. Maya Pratama, Sp.JP',
-              doctorSpecialist: 'Kardiologi & Vaskular',
-              status: 'ready',
-              statusLabel: 'Siap Diambil di Loket Farmasi',
-              createdAt: DateTime.now(),
-              notes: 'Diminum teratur sesudah makan.',
-              items: const [
-                PharmacyPrescriptionItem(
-                  id: '75000000-0000-4000-8000-000000000001',
-                  medicineName: 'Amlodipine Besylate',
-                  dosage: '5mg',
-                  frequency: '1x sehari pagi',
-                  route: 'oral',
-                  durationDays: 30,
-                  instruction: 'Sesudah makan pagi',
-                ),
-                PharmacyPrescriptionItem(
-                  id: '75000000-0000-4000-8000-000000000002',
-                  medicineName: 'Candesartan',
-                  dosage: '8mg',
-                  frequency: '1x sehari malam',
-                  route: 'oral',
-                  durationDays: 30,
-                  instruction: 'Sebelum tidur malam',
-                ),
-              ],
-            ),
-    );
+    ).firstOrNull;
+    if (matchRx != null) {
+      _showPrescriptionDialog(context, matchRx);
+      return;
+    }
 
+    // 2. Check in pharmacyInventoryProvider (e.g. stock warning targetId: 'med-4')
+    final medicines = ref.read(pharmacyInventoryProvider);
+    final matchMed = medicines.where((m) {
+      return m.id == item.targetId ||
+          m.name.toLowerCase() == item.targetId?.toLowerCase() ||
+          item.message.toLowerCase().contains(m.name.toLowerCase());
+    }).firstOrNull;
+    if (matchMed != null) {
+      _showMedicineStockDialog(context, matchMed, item);
+      return;
+    }
+
+    _showSystemNoticeDialog(
+      context,
+      item,
+      fallbackNotice: 'Data resep atau stok obat tidak ditemukan di modul farmasi.',
+    );
+  }
+
+  void _showPrescriptionDialog(BuildContext context, PharmacyPrescription rx) {
     showDialog(
       context: context,
       builder: (dialogCtx) => Dialog(
@@ -506,7 +671,263 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     );
   }
 
-  void _showSystemNoticeDialog(BuildContext context, AppNotification item) {
+  void _showMedicineStockDialog(
+    BuildContext context,
+    MedicineStock med,
+    AppNotification item,
+  ) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        clipBehavior: Clip.antiAlias,
+        child: Container(
+          width: 480,
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.purple.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.inventory_2_outlined,
+                      color: Colors.purple,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Peringatan Inventaris Obat',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        Text(
+                          med.name,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey.shade700,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(dialogCtx),
+                  ),
+                ],
+              ),
+              const Divider(height: 24),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: (med.stock <= med.minStock)
+                      ? Colors.red.shade50
+                      : Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: (med.stock <= med.minStock)
+                        ? Colors.red.shade200
+                        : Colors.green.shade200,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      (med.stock <= med.minStock)
+                          ? Icons.warning_amber_rounded
+                          : Icons.check_circle_outline,
+                      color: (med.stock <= med.minStock)
+                          ? Colors.red.shade800
+                          : Colors.green.shade800,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        (med.stock <= med.minStock)
+                            ? 'Stok Kritis: ${med.stock} ${med.unit} (Batas Min: ${med.minStock} ${med.unit})'
+                            : 'Stok Aman: ${med.stock} ${med.unit}',
+                        style: TextStyle(
+                          color: (med.stock <= med.minStock)
+                              ? Colors.red.shade900
+                              : Colors.green.shade900,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              _buildInfoSection('Kategori Obat', med.category, Icons.category_outlined),
+              const SizedBox(height: 10),
+              _buildInfoSection(
+                'Nomor Batch & Sediaan',
+                '${med.batchNumber} • ${med.form}',
+                Icons.medical_services_outlined,
+              ),
+              const SizedBox(height: 10),
+              _buildInfoSection(
+                'Estimasi Kadaluarsa',
+                DateTime.tryParse(med.expirationDate) != null
+                    ? DateFormat('d MMMM yyyy', 'id_ID')
+                        .format(DateTime.parse(med.expirationDate))
+                    : med.expirationDate,
+                Icons.event_outlined,
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () => Navigator.pop(dialogCtx),
+                      child: const Text('Tutup'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppTheme.primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () {
+                        ref
+                            .read(pharmacyInventoryProvider.notifier)
+                            .restock(med.id, 50);
+                        Navigator.pop(dialogCtx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Berhasil restock +50 ${med.unit} untuk ${med.name}.',
+                            ),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.add_shopping_cart, size: 16),
+                      label: const Text('Restock +50'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openLabDetail(BuildContext context, AppNotification item) {
+    final labs = ref.read(labOrdersProvider);
+    var matchLab = labs.where(
+      (l) => l.id == item.targetId || l.orderNumber == item.targetId,
+    ).firstOrNull;
+
+    if (matchLab == null) {
+      matchLab = labs.where((l) {
+        return item.message.contains(l.orderNumber) ||
+            item.message.toLowerCase().contains(l.patientName.toLowerCase());
+      }).firstOrNull;
+    }
+
+    if (matchLab != null) {
+      showDialog(
+        context: context,
+        builder: (_) => LabResultPrintDialog(order: matchLab!),
+      );
+      return;
+    }
+
+    _showSystemNoticeDialog(
+      context,
+      item,
+      fallbackNotice: 'Lembar hasil laboratorium belum tersedia atau sedang dianalisis analis.',
+    );
+  }
+
+  void _openCertificateDetail(BuildContext context, AppNotification item) {
+    final certs = ref.read(medicalCertificatesProvider);
+    var matchCert = certs.where(
+      (c) => c.id == item.targetId || c.certificateNumber == item.targetId,
+    ).firstOrNull;
+
+    if (matchCert == null) {
+      matchCert = certs.where((c) {
+        return item.message.contains(c.certificateNumber) ||
+            item.message.toLowerCase().contains(c.patientName.toLowerCase());
+      }).firstOrNull;
+    }
+
+    if (matchCert != null) {
+      showMedicalCertificateDialog(context, matchCert!);
+      return;
+    }
+
+    _showSystemNoticeDialog(
+      context,
+      item,
+      fallbackNotice: 'Surat Keterangan Sakit (SKD) tidak ditemukan atau nomor surat telah kadaluarsa.',
+    );
+  }
+
+  void _openInpatientDetail(BuildContext context, AppNotification item) {
+    final admissions = ref.read(inpatientAdmissionsProvider);
+    var matchAdm = admissions.where(
+      (a) => a.id == item.targetId || a.admissionNumber == item.targetId,
+    ).firstOrNull;
+
+    if (matchAdm == null) {
+      matchAdm = admissions.where((a) {
+        return item.message.contains(a.admissionNumber) ||
+            item.title.contains(a.admissionNumber) ||
+            item.message.toLowerCase().contains(a.patientName.toLowerCase());
+      }).firstOrNull;
+    }
+
+    if (matchAdm != null) {
+      showDialog(
+        context: context,
+        builder: (_) => InpatientCPPTDialog(admissionId: matchAdm!.id),
+      );
+      return;
+    }
+
+    _showSystemNoticeDialog(
+      context,
+      item,
+      fallbackNotice: 'Data rawat inap pasien tidak ditemukan atau telah dipulangkan.',
+    );
+  }
+
+  void _showSystemNoticeDialog(
+    BuildContext context,
+    AppNotification item, {
+    String? fallbackNotice,
+  }) {
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
@@ -534,6 +955,21 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               item.message,
               style: const TextStyle(fontSize: 14, height: 1.4),
             ),
+            if (fallbackNotice != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.amber.shade200),
+                ),
+                child: Text(
+                  fallbackNotice,
+                  style: TextStyle(fontSize: 12, color: Colors.amber.shade900),
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -627,8 +1063,15 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     final filtered = allItems.where((n) {
       if (_selectedFilter == 'unread') return !n.isRead;
       if (_selectedFilter == 'appointment') return n.type == 'appointment';
+      if (_selectedFilter == 'clinical') {
+        return n.type == 'clinical' ||
+            n.type == 'lab' ||
+            n.type == 'certificate' ||
+            n.type == 'skd';
+      }
       if (_selectedFilter == 'prescription') return n.type == 'prescription';
       if (_selectedFilter == 'billing') return n.type == 'billing';
+      if (_selectedFilter == 'inpatient') return n.type == 'inpatient';
       return true;
     }).toList();
 
@@ -722,11 +1165,15 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                     highlight: notifState.unreadCount > 0,
                   ),
                   const SizedBox(width: 8),
-                  _buildFilterChip('appointment', 'Reservasi'),
+                  _buildFilterChip('appointment', 'Poli & Antrean'),
                   const SizedBox(width: 8),
-                  _buildFilterChip('prescription', 'Farmasi & Resep'),
+                  _buildFilterChip('clinical', 'Rekam Medis & Lab'),
                   const SizedBox(width: 8),
-                  _buildFilterChip('billing', 'Tagihan'),
+                  _buildFilterChip('prescription', 'Farmasi & Obat'),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('billing', 'Tagihan & Kasir'),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('inpatient', 'Rawat Inap'),
                 ],
               ),
             ),

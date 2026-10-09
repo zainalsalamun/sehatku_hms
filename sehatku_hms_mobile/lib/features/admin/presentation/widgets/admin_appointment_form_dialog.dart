@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/utils/document_template_helper.dart';
+import '../../../../core/utils/print_helper.dart';
 import '../../../../core/utils/uuid_helper.dart';
 import '../../../../shared/models/health_models.dart';
 import '../../../notification/application/notifications_provider.dart';
@@ -49,39 +51,6 @@ class _AdminAppointmentFormDialogState
       'Checked-in'; // 'Checked-in' (Walk-in di loket) or 'Terkonfirmasi' (Booking)
 
   bool _isLoading = false;
-
-  final List<String> _timeSlots = [
-    '08:00',
-    '08:30',
-    '09:00',
-    '09:30',
-    '10:00',
-    '10:30',
-    '11:00',
-    '11:30',
-    '13:00',
-    '13:30',
-    '14:00',
-    '14:30',
-    '15:00',
-    '15:30',
-    '16:00',
-    '16:30',
-    '18:30',
-    '19:00',
-    '19:30',
-    '20:00',
-  ];
-
-  final List<String> _quickReasons = [
-    'Konsultasi Rutin',
-    'Demam & Flu',
-    'Nyeri Dada & Sesak',
-    'Pemeriksaan Gigi',
-    'Kontrol Pasca Obat',
-    'Pusing / Sakit Kepala',
-    'Medical Checkup',
-  ];
 
   @override
   void initState() {
@@ -137,6 +106,9 @@ class _AdminAppointmentFormDialogState
     final patients = ref.watch(adminPatientsProvider);
     final depts = ref.watch(adminDepartmentsProvider);
     final allDoctors = ref.watch(adminDoctorsProvider);
+    final slotConfig = ref.watch(appointmentSlotConfigProvider);
+    final timeSlots = slotConfig.timeSlots;
+    final quickReasons = slotConfig.quickReasons;
 
     final filteredDoctors = _selectedDept == null
         ? allDoctors
@@ -458,13 +430,15 @@ class _AdminAppointmentFormDialogState
                     Expanded(
                       child: InkWell(
                         onTap: () async {
+                          final now = DateTime.now();
+                          final today = DateTime(now.year, now.month, now.day);
                           final picked = await showDatePicker(
                             context: context,
-                            initialDate: _appointmentDate,
-                            firstDate: DateTime.now().subtract(
-                              const Duration(days: 1),
-                            ),
-                            lastDate: DateTime.now().add(
+                            initialDate: _appointmentDate.isBefore(today)
+                                ? today
+                                : _appointmentDate,
+                            firstDate: today,
+                            lastDate: today.add(
                               const Duration(days: 30),
                             ),
                           );
@@ -495,7 +469,7 @@ class _AdminAppointmentFormDialogState
                           prefixIcon: Icon(Icons.access_time),
                           border: OutlineInputBorder(),
                         ),
-                        items: _timeSlots.map((slot) {
+                        items: timeSlots.map((slot) {
                           return DropdownMenuItem(
                             value: slot,
                             child: Text('$slot WIB', overflow: TextOverflow.ellipsis),
@@ -524,7 +498,7 @@ class _AdminAppointmentFormDialogState
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 6,
-                  children: _quickReasons.map((r) {
+                  children: quickReasons.map((r) {
                     return ActionChip(
                       label: Text(r, style: const TextStyle(fontSize: 11)),
                       onPressed: () => setState(() => _reasonCtrl.text = r),
@@ -638,6 +612,8 @@ class _AdminAppointmentFormDialogState
                                 queueNumber: queueNumber,
                                 department: deptName,
                                 reason: _reasonCtrl.text.trim(),
+                                appointmentDate: _appointmentDate,
+                                doctorPhotoUrl: doctor.photoUrl,
                               );
 
                               ref
@@ -665,7 +641,27 @@ class _AdminAppointmentFormDialogState
                                     action: SnackBarAction(
                                       label: 'Cetak Karcis',
                                       textColor: Colors.white,
-                                      onPressed: () {},
+                                      onPressed: () {
+                                        final html = DocumentTemplateHelper.generateQueueTicketHtml(
+                                          queueNumber: queueNumber,
+                                          patientName: patientName,
+                                          patientMrn: _patientMode == 0
+                                              ? (_selectedPatient?.medicalRecordNumber ?? '')
+                                              : '',
+                                          doctorName: doctor.name,
+                                          department: deptName,
+                                          dateLabel: dateLabel,
+                                          time: _selectedTime,
+                                          insurance: _patientMode == 0
+                                              ? (_selectedPatient?.insuranceProvider ?? 'Umum / Mandiri')
+                                              : _newInsurance,
+                                          status: 'Menunggu',
+                                        );
+                                        printHtmlDocument(
+                                          title: 'Karcis Antrean $queueNumber - $patientName',
+                                          htmlContent: html,
+                                        );
+                                      },
                                     ),
                                   ),
                                 );

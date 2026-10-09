@@ -50,7 +50,7 @@ class _QueueTvDisplayScreenState extends ConsumerState<QueueTvDisplayScreen> {
 
     // Filter waiting queues for side cards
     final waitingAppointments = appointments
-        .where((a) => a.status == 'Menunggu' || a.status == 'Checked-in')
+        .where((a) => !a.isExpired && (a.status == 'Menunggu' || a.status == 'Checked-in'))
         .toList();
 
     final waitingBilling =
