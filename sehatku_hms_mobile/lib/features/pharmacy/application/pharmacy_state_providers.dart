@@ -81,6 +81,25 @@ class PharmacyInventoryNotifier extends Notifier<List<MedicineStock>> {
 
   Future<void> refresh() async => _fetchFromDatabase();
 
+  Future<void> addMedicine(MedicineStock item) async {
+    state = [item, ...state];
+    final created = await ref.read(apiClientProvider).createMedicine(item);
+    if (created != null) {
+      state = [
+        for (final m in state)
+          if (m.id == item.id) created else m,
+      ];
+    }
+    ref.read(adminAuditLogsProvider.notifier).log(
+          actorName: 'Petugas Gudang Farmasi',
+          actorRole: 'pharmacist',
+          action: 'CREATE',
+          resourceType: 'Inventory',
+          resourceId: created?.id ?? item.id,
+          details: 'Mendaftarkan item obat baru: ${item.name} (${item.category})',
+        );
+  }
+
   void restock(String id, int quantity) {
     state = [
       for (final m in state)
@@ -110,4 +129,80 @@ class PharmacyInventoryNotifier extends Notifier<List<MedicineStock>> {
 final pharmacyInventoryProvider =
     NotifierProvider<PharmacyInventoryNotifier, List<MedicineStock>>(
   PharmacyInventoryNotifier.new,
+);
+
+// --- PHARMACY MASTER CONFIG PROVIDER ---
+
+class PharmacyConfigNotifier extends Notifier<PharmacyMasterConfig> {
+  @override
+  PharmacyMasterConfig build() {
+    _fetchFromApi();
+    return const PharmacyMasterConfig(
+      categories: [
+        'Analgesik & Antipiretik',
+        'Antibiotik',
+        'Antihipertensi',
+        'Antasida & Saluran Cerna',
+        'Antihistamin / Alergi',
+        'Suplemen & Vitamin',
+        'Obat Luar / Topikal',
+        'Obat Batuk & Flu',
+        'Kardiologi & Jantung',
+        'Lainnya',
+      ],
+      forms: [
+        'Tablet',
+        'Kaplet',
+        'Kapsul',
+        'Sirup / Suspensi',
+        'Salep / Krim / Gel',
+        'Tetes Mata / Telinga',
+        'Injeksi / Ampul',
+        'Larutan Infus',
+      ],
+      units: [
+        'strip (10 tab)',
+        'strip (10 kap)',
+        'botol (60 ml)',
+        'botol (100 ml)',
+        'tube (10 gr)',
+        'tube (15 gr)',
+        'ampul',
+        'vial',
+        'sachet',
+        'box',
+      ],
+    );
+  }
+
+  Future<void> _fetchFromApi() async {
+    final client = ref.read(apiClientProvider);
+    final config = await client.getPharmacyConfig();
+    if (config != null) {
+      state = config;
+    }
+  }
+
+  Future<void> refresh() async => _fetchFromApi();
+
+  Future<void> updateConfig({
+    List<String>? categories,
+    List<String>? forms,
+    List<String>? units,
+  }) async {
+    final client = ref.read(apiClientProvider);
+    final updated = await client.updatePharmacyConfig(
+      categories: categories,
+      forms: forms,
+      units: units,
+    );
+    if (updated != null) {
+      state = updated;
+    }
+  }
+}
+
+final pharmacyConfigProvider =
+    NotifierProvider<PharmacyConfigNotifier, PharmacyMasterConfig>(
+  PharmacyConfigNotifier.new,
 );

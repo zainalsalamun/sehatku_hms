@@ -215,9 +215,11 @@ class _LabResultEntryDialogState extends ConsumerState<LabResultEntryDialog> {
                         await ref
                             .read(labOrdersProvider.notifier)
                             .collectSample(order.id, _collectorNameCtrl.text.trim());
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Sampel berhasil ditandai telah diambil.')),
-                        );
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Sampel berhasil ditandai telah diambil.')),
+                          );
+                        }
                       },
                       icon: const Icon(Icons.check, size: 14),
                       label: const Text('Tandai Sampel Diambil', style: TextStyle(fontSize: 11)),

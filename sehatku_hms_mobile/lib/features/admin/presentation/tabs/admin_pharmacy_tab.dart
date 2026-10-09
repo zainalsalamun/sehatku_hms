@@ -9,6 +9,7 @@ import '../../../../shared/widgets/app_widgets.dart';
 import '../../../../shared/widgets/medicine_label_print_dialog.dart';
 import '../../../notification/application/notifications_provider.dart';
 import '../../../pharmacy/application/pharmacy_state_providers.dart';
+import '../../../pharmacy/presentation/widgets/medicine_form_dialog.dart';
 import '../../../queue/application/queue_display_provider.dart';
 import '../../../reports/presentation/widgets/export_report_dialog.dart';
 
@@ -190,19 +191,39 @@ class _AdminPharmacyTabState extends ConsumerState<AdminPharmacyTab>
                   ),
                 ],
               ),
-              OutlinedButton.icon(
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (_) => const ExportReportDialog(initialType: ReportExportType.pharmacyStock),
-                  );
-                },
-                icon: const Icon(Icons.download_outlined, size: 18),
-                label: const Text('Export Valuasi Stok (.csv)'),
-                style: OutlinedButton.styleFrom(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
+              Row(
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (_) => const ExportReportDialog(initialType: ReportExportType.pharmacyStock),
+                      );
+                    },
+                    icon: const Icon(Icons.download_outlined, size: 18),
+                    label: const Text('Export Valuasi Stok (.csv)'),
+                    style: OutlinedButton.styleFrom(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  FilledButton.icon(
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (_) => const MedicineFormDialog(),
+                      );
+                    },
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Tambah Obat Baru'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -731,15 +752,26 @@ class _AdminPharmacyTabState extends ConsumerState<AdminPharmacyTab>
         child: Padding(
           padding: const EdgeInsets.all(40),
           child: Column(
-            children: const [
-              Icon(Icons.inventory_2_outlined, size: 48, color: Colors.grey),
-              SizedBox(height: 12),
-              Text(
+            children: [
+              const Icon(Icons.inventory_2_outlined, size: 48, color: Colors.grey),
+              const SizedBox(height: 12),
+              const Text(
                 'Tidak ada stok obat yang sesuai filter.',
                 style: TextStyle(
                   color: Colors.grey,
                   fontWeight: FontWeight.bold,
                 ),
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (_) => const MedicineFormDialog(),
+                  );
+                },
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Tambah Obat Baru'),
               ),
             ],
           ),

@@ -21,15 +21,6 @@ class _AdminProceduresTabState extends ConsumerState<AdminProceduresTab> {
   int _currentPage = 1;
   int _itemsPerPage = 10;
 
-  final List<String> _categories = [
-    'Semua',
-    'Umum',
-    'Gigi',
-    'Tindakan Medis',
-    'Laboratorium Rapid',
-    'Keperawatan',
-  ];
-
   @override
   void dispose() {
     _searchController.dispose();
@@ -103,21 +94,22 @@ class _AdminProceduresTabState extends ConsumerState<AdminProceduresTab> {
                           labelText: 'Kategori Layanan',
                           border: OutlineInputBorder(),
                         ),
-                        items:
-                            [
-                                  'Umum',
-                                  'Gigi',
-                                  'Tindakan Medis',
-                                  'Laboratorium Rapid',
-                                  'Keperawatan',
-                                ]
-                                .map(
-                                  (c) => DropdownMenuItem(
-                                    value: c,
-                                    child: Text(c),
-                                  ),
-                                )
-                                .toList(),
+                        items: <String>{
+                          'Umum',
+                          'Gigi',
+                          'Tindakan Medis',
+                          'Laboratorium Rapid',
+                          'Keperawatan',
+                          ...ref.read(clinicProceduresProvider).map((p) => p.category).where((c) => c.isNotEmpty),
+                          category,
+                        }
+                            .map<DropdownMenuItem<String>>(
+                              (c) => DropdownMenuItem<String>(
+                                value: c,
+                                child: Text(c),
+                              ),
+                            )
+                            .toList(),
                         onChanged: (v) {
                           if (v != null) setModalState(() => category = v);
                         },
@@ -216,6 +208,10 @@ class _AdminProceduresTabState extends ConsumerState<AdminProceduresTab> {
   @override
   Widget build(BuildContext context) {
     final procedures = ref.watch(clinicProceduresProvider);
+    final filterCategories = <String>[
+      'Semua',
+      ...procedures.map((p) => p.category).where((c) => c.isNotEmpty).toSet(),
+    ];
     final currency = NumberFormat.currency(
       locale: 'id_ID',
       symbol: 'Rp ',
@@ -309,7 +305,7 @@ class _AdminProceduresTabState extends ConsumerState<AdminProceduresTab> {
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
-                    children: _categories.map((cat) {
+                    children: filterCategories.map((cat) {
                       final isSelected = _selectedCategory == cat;
                       return Padding(
                         padding: const EdgeInsets.only(right: 8),

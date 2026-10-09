@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../core/utils/document_template_helper.dart';
+import '../../core/utils/print_helper.dart';
 import '../models/health_models.dart';
 
 class MedicineLabelPrintDialog extends StatefulWidget {
@@ -166,15 +168,30 @@ class _MedicineLabelPrintDialogState extends State<MedicineLabelPrintDialog> {
                           foregroundColor: Colors.teal,
                         ),
                         onPressed: () {
+                          final html = DocumentTemplateHelper.generateMedicineLabelHtml(
+                            prescription: p,
+                            items: p.items,
+                            labelType: _labelType,
+                            mealTiming: _mealTiming,
+                            morning: _morning,
+                            afternoon: _afternoon,
+                            night: _night,
+                            mustFinish: _mustFinish,
+                            shakeWell: _shakeWell,
+                            expiryDate: _expiryDate,
+                          );
+                          printHtmlDocument(
+                            title: 'Etiket Resep ${p.prescriptionNumber}',
+                            htmlContent: html,
+                          );
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
-                                'Mencetak seluruh ${p.items.length} etiket obat ke printer thermal...',
+                                'Membuka dialog cetak untuk seluruh ${p.items.length} etiket obat...',
                               ),
                               backgroundColor: Colors.teal,
                             ),
                           );
-                          Navigator.of(context).pop();
                         },
                         icon: const Icon(Icons.print_outlined),
                         label: Text('Cetak Semua (${p.items.length} Etiket)'),
@@ -190,17 +207,51 @@ class _MedicineLabelPrintDialogState extends State<MedicineLabelPrintDialog> {
                         ),
                       ),
                       onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              _selectedTabIndex == 0
-                                  ? 'Mencetak etiket: ${currentItem?.medicineName}...'
-                                  : 'Mencetak stiker label rekam medis ${p.patientName}...',
+                        if (_selectedTabIndex == 0) {
+                          if (currentItem != null) {
+                            final html = DocumentTemplateHelper.generateMedicineLabelHtml(
+                              prescription: p,
+                              items: [currentItem],
+                              labelType: _labelType,
+                              mealTiming: _mealTiming,
+                              morning: _morning,
+                              afternoon: _afternoon,
+                              night: _night,
+                              mustFinish: _mustFinish,
+                              shakeWell: _shakeWell,
+                              expiryDate: _expiryDate,
+                            );
+                            printHtmlDocument(
+                              title: 'Etiket Obat - ${currentItem.medicineName}',
+                              htmlContent: html,
+                            );
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Membuka dialog cetak etiket ${currentItem.medicineName}...',
+                                ),
+                                backgroundColor: Colors.teal,
+                              ),
+                            );
+                          }
+                        } else {
+                          final html = DocumentTemplateHelper.generatePatientMrnLabelHtml(
+                            prescription: p,
+                            patient: widget.patient,
+                          );
+                          printHtmlDocument(
+                            title: 'Label RM - ${p.patientName} (${p.patientMrn})',
+                            htmlContent: html,
+                          );
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Membuka dialog cetak stiker label rekam medis ${p.patientName}...',
+                              ),
+                              backgroundColor: Colors.teal,
                             ),
-                            backgroundColor: Colors.teal,
-                          ),
-                        );
-                        Navigator.of(context).pop();
+                          );
+                        }
                       },
                       icon: const Icon(Icons.print),
                       label: Text(

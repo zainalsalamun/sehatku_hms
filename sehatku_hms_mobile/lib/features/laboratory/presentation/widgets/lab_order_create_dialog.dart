@@ -484,6 +484,8 @@ class _LabOrderCreateDialogState extends ConsumerState<LabOrderCreateDialog> {
                                 )
                                 .toList();
 
+                            final messenger = ScaffoldMessenger.of(context);
+                            final navigator = Navigator.of(context);
                             final res = await ref
                                 .read(labOrdersProvider.notifier)
                                 .createOrder(
@@ -499,10 +501,10 @@ class _LabOrderCreateDialogState extends ConsumerState<LabOrderCreateDialog> {
 
                             if (mounted) {
                               setState(() => _isLoading = false);
-                              Navigator.of(context).pop();
+                              navigator.pop();
 
                               if (res != null) {
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                messenger.showSnackBar(
                                   SnackBar(
                                     content: Text(
                                       'Order Lab Berhasil Dibuat: ${res.orderNumber} untuk ${res.patientName}. Tagihan otomatis diteruskan ke Kasir.',
