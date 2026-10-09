@@ -97,6 +97,11 @@ abstract final class AppColors {
       case 'checked-in':
       case 'terkonfirmasi':
         return successLight;
+      case 'tidak berlaku':
+      case 'kadaluarsa':
+      case 'kedaluwarsa':
+      case 'hangus':
+        return grey200;
       case 'batal':
       case 'dibatalkan':
         return errorLight;
@@ -115,6 +120,11 @@ abstract final class AppColors {
       case 'checked-in':
       case 'terkonfirmasi':
         return successText;
+      case 'tidak berlaku':
+      case 'kadaluarsa':
+      case 'kedaluwarsa':
+      case 'hangus':
+        return grey700;
       case 'batal':
       case 'dibatalkan':
         return errorText;

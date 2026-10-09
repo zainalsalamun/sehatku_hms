@@ -146,6 +146,53 @@ class Patient {
   }
 }
 
+DateTime? parseDateFromLabel(String label) {
+  try {
+    final clean = label.trim();
+    if (clean.isEmpty) return null;
+
+    final iso = DateTime.tryParse(clean);
+    if (iso != null) return iso;
+
+    final months = {
+      'jan': 1, 'januari': 1,
+      'feb': 2, 'februari': 2,
+      'mar': 3, 'maret': 3,
+      'apr': 4, 'april': 4,
+      'mei': 5,
+      'jun': 6, 'juni': 6,
+      'jul': 7, 'juli': 7,
+      'agu': 8, 'ags': 8, 'agustus': 8,
+      'sep': 9, 'september': 9,
+      'okt': 10, 'oct': 10, 'oktober': 10,
+      'nov': 11, 'november': 11,
+      'des': 12, 'dec': 12, 'desember': 12,
+    };
+
+    final slashMatch = RegExp(r'(\d{1,2})[/-](\d{1,2})[/-](\d{4})').firstMatch(clean);
+    if (slashMatch != null) {
+      final d = int.parse(slashMatch.group(1)!);
+      final m = int.parse(slashMatch.group(2)!);
+      final y = int.parse(slashMatch.group(3)!);
+      return DateTime(y, m, d);
+    }
+
+    final textMatch = RegExp(r'(\d{1,2})\s+([A-Za-z]+)(?:\s+(\d{4}))?').firstMatch(clean);
+    if (textMatch != null) {
+      final day = int.parse(textMatch.group(1)!);
+      final monthName = textMatch.group(2)!.toLowerCase();
+      final year = textMatch.group(3) != null
+          ? int.parse(textMatch.group(3)!)
+          : DateTime.now().year;
+      final m = months[monthName];
+      if (m != null) {
+        return DateTime(year, m, day);
+      }
+    }
+  } catch (_) {}
+  return null;
+}
+
 class Appointment {
   const Appointment({
     required this.id,
@@ -160,6 +207,9 @@ class Appointment {
     this.cancellationReason,
     this.reservationNumber,
     this.doctorPhotoUrl = '',
+    this.appointmentDate,
+    this.doctorId,
+    this.patientId,
   });
 
   final String id;
@@ -174,6 +224,53 @@ class Appointment {
   final String? cancellationReason;
   final String? reservationNumber;
   final String doctorPhotoUrl;
+  final DateTime? appointmentDate;
+  final String? doctorId;
+  final String? patientId;
+
+  bool get isExpired {
+    if (status == 'Tidak Berlaku' ||
+        status == 'Kadaluarsa' ||
+        status == 'Kedaluwarsa' ||
+        status == 'Hangus') {
+      return true;
+    }
+    if (status == 'Selesai' || status == 'Dibatalkan') {
+      return false;
+    }
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    if (appointmentDate != null) {
+      final apptDay = DateTime(
+        appointmentDate!.year,
+        appointmentDate!.month,
+        appointmentDate!.day,
+      );
+      if (apptDay.isBefore(today)) return true;
+    }
+
+    final parsed = parseDateFromLabel(dateLabel);
+    if (parsed != null) {
+      final labelDay = DateTime(parsed.year, parsed.month, parsed.day);
+      if (labelDay.isBefore(today)) return true;
+    }
+
+    final lower = dateLabel.toLowerCase();
+    if (lower.contains('kemarin') ||
+        lower.contains('terlewat') ||
+        lower.contains('lewat')) {
+      return true;
+    }
+
+    return false;
+  }
+
+  String get displayStatus {
+    if (isExpired) return 'Tidak Berlaku';
+    return status;
+  }
 
   String get displayReservationNumber {
     if (reservationNumber != null && reservationNumber!.isNotEmpty) {
@@ -202,6 +299,9 @@ class Appointment {
     String? cancellationReason,
     String? reservationNumber,
     String? doctorPhotoUrl,
+    DateTime? appointmentDate,
+    String? doctorId,
+    String? patientId,
   }) {
     return Appointment(
       id: id ?? this.id,
@@ -216,6 +316,98 @@ class Appointment {
       cancellationReason: cancellationReason ?? this.cancellationReason,
       reservationNumber: reservationNumber ?? this.reservationNumber,
       doctorPhotoUrl: doctorPhotoUrl ?? this.doctorPhotoUrl,
+      appointmentDate: appointmentDate ?? this.appointmentDate,
+      doctorId: doctorId ?? this.doctorId,
+      patientId: patientId ?? this.patientId,
+    );
+  }
+}
+
+class AppointmentSlotConfig {
+  const AppointmentSlotConfig({
+    this.timeSlots = const [],
+    this.quickReasons = const [],
+  });
+
+  final List<String> timeSlots;
+  final List<String> quickReasons;
+
+  factory AppointmentSlotConfig.fromJson(Map<String, dynamic> json) {
+    return AppointmentSlotConfig(
+      timeSlots: (json['timeSlots'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
+      quickReasons: (json['quickReasons'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'timeSlots': timeSlots,
+      'quickReasons': quickReasons,
+    };
+  }
+
+  AppointmentSlotConfig copyWith({
+    List<String>? timeSlots,
+    List<String>? quickReasons,
+  }) {
+    return AppointmentSlotConfig(
+      timeSlots: timeSlots ?? this.timeSlots,
+      quickReasons: quickReasons ?? this.quickReasons,
+    );
+  }
+}
+
+class PharmacyMasterConfig {
+  const PharmacyMasterConfig({
+    this.categories = const [],
+    this.forms = const [],
+    this.units = const [],
+  });
+
+  final List<String> categories;
+  final List<String> forms;
+  final List<String> units;
+
+  factory PharmacyMasterConfig.fromJson(Map<String, dynamic> json) {
+    return PharmacyMasterConfig(
+      categories: (json['categories'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
+      forms: (json['forms'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
+      units: (json['units'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'categories': categories,
+      'forms': forms,
+      'units': units,
+    };
+  }
+
+  PharmacyMasterConfig copyWith({
+    List<String>? categories,
+    List<String>? forms,
+    List<String>? units,
+  }) {
+    return PharmacyMasterConfig(
+      categories: categories ?? this.categories,
+      forms: forms ?? this.forms,
+      units: units ?? this.units,
     );
   }
 }
@@ -274,12 +466,15 @@ class InvoiceItem {
   final int quantity;
   final double unitPrice;
   final double subtotal;
+
+  double get total => subtotal;
 }
 
 class Invoice {
   const Invoice({
     required this.id,
     required this.invoiceNumber,
+    this.patientId,
     required this.patientName,
     this.patientMrn = 'MRN-2026-001',
     this.insuranceProvider = 'Umum / Mandiri',
@@ -296,6 +491,7 @@ class Invoice {
 
   final String id;
   final String invoiceNumber;
+  final String? patientId;
   final String patientName;
   final String patientMrn;
   final String insuranceProvider;
@@ -312,6 +508,7 @@ class Invoice {
   Invoice copyWith({
     String? id,
     String? invoiceNumber,
+    String? patientId,
     String? patientName,
     String? patientMrn,
     String? insuranceProvider,
@@ -328,6 +525,7 @@ class Invoice {
     return Invoice(
       id: id ?? this.id,
       invoiceNumber: invoiceNumber ?? this.invoiceNumber,
+      patientId: patientId ?? this.patientId,
       patientName: patientName ?? this.patientName,
       patientMrn: patientMrn ?? this.patientMrn,
       insuranceProvider: insuranceProvider ?? this.insuranceProvider,
@@ -757,7 +955,21 @@ class CashierShiftModel {
 
   bool get isOpen => status == 'OPEN';
 
+  static double _toDouble(dynamic val) {
+    if (val == null) return 0.0;
+    if (val is num) return val.toDouble();
+    return double.tryParse(val.toString()) ?? 0.0;
+  }
+
+  static int _toInt(dynamic val) {
+    if (val == null) return 0;
+    if (val is num) return val.toInt();
+    return int.tryParse(val.toString()) ?? 0;
+  }
+
   factory CashierShiftModel.fromJson(Map<String, dynamic> json) {
+    final live = json['liveSummary'] as Map<String, dynamic>?;
+
     return CashierShiftModel(
       id: json['id']?.toString() ?? '',
       cashierId: json['cashierId']?.toString() ?? '',
@@ -769,31 +981,25 @@ class CashierShiftModel {
       endTime: json['endTime'] != null
           ? DateTime.tryParse(json['endTime'].toString())
           : null,
-      initialCash: (json['initialCash'] as num?)?.toDouble() ??
-          (json['liveSummary']?['initialCash'] as num?)?.toDouble() ??
-          0.0,
-      totalCashReceived: (json['totalCashReceived'] as num?)?.toDouble() ??
-          (json['liveSummary']?['totalCashReceived'] as num?)?.toDouble() ??
-          0.0,
-      totalQrisReceived: (json['totalQrisReceived'] as num?)?.toDouble() ??
-          (json['liveSummary']?['totalQrisReceived'] as num?)?.toDouble() ??
-          0.0,
-      totalTransferReceived:
-          (json['totalTransferReceived'] as num?)?.toDouble() ??
-              (json['liveSummary']?['totalTransferReceived'] as num?)
-                  ?.toDouble() ??
-              0.0,
-      totalDebitReceived: (json['totalDebitReceived'] as num?)?.toDouble() ??
-          (json['liveSummary']?['totalDebitReceived'] as num?)?.toDouble() ??
-          0.0,
-      totalTransactions: (json['totalTransactions'] as num?)?.toInt() ??
-          (json['liveSummary']?['totalTransactions'] as num?)?.toInt() ??
-          0,
-      expectedCashEnd: (json['expectedCashEnd'] as num?)?.toDouble() ??
-          (json['liveSummary']?['expectedCashEnd'] as num?)?.toDouble() ??
-          0.0,
-      actualCashCounted: (json['actualCashCounted'] as num?)?.toDouble(),
-      discrepancy: (json['discrepancy'] as num?)?.toDouble(),
+      initialCash: _toDouble(json['initialCash'] ?? live?['initialCash']),
+      totalCashReceived:
+          _toDouble(json['totalCashReceived'] ?? live?['totalCashReceived']),
+      totalQrisReceived:
+          _toDouble(json['totalQrisReceived'] ?? live?['totalQrisReceived']),
+      totalTransferReceived: _toDouble(
+        json['totalTransferReceived'] ?? live?['totalTransferReceived'],
+      ),
+      totalDebitReceived:
+          _toDouble(json['totalDebitReceived'] ?? live?['totalDebitReceived']),
+      totalTransactions:
+          _toInt(json['totalTransactions'] ?? live?['totalTransactions']),
+      expectedCashEnd:
+          _toDouble(json['expectedCashEnd'] ?? live?['expectedCashEnd']),
+      actualCashCounted: json['actualCashCounted'] != null
+          ? _toDouble(json['actualCashCounted'])
+          : null,
+      discrepancy:
+          json['discrepancy'] != null ? _toDouble(json['discrepancy']) : null,
       status: json['status']?.toString() ?? 'OPEN',
       notes: json['notes']?.toString() ?? '',
     );
@@ -822,6 +1028,9 @@ class RoomBedModel {
   final String status;
   final String? notes;
   final ActiveInpatientPatient? activePatient;
+
+  bool get isAvailable =>
+      status.toLowerCase() == 'available' || status.toLowerCase() == 'tersedia';
 
   factory RoomBedModel.fromJson(Map<String, dynamic> json) {
     return RoomBedModel(
@@ -1012,6 +1221,68 @@ class InpatientAdmissionModel {
           : null,
     );
   }
+
+  InpatientAdmissionModel copyWith({
+    String? id,
+    String? admissionNumber,
+    String? patientId,
+    String? patientName,
+    String? patientMrn,
+    String? patientPhone,
+    String? patientGender,
+    String? patientInsurance,
+    String? doctorId,
+    String? doctorName,
+    String? doctorSpecialist,
+    String? bedId,
+    String? roomNumber,
+    String? roomName,
+    String? bedNumber,
+    String? classType,
+    double? dailyRate,
+    DateTime? admissionDate,
+    DateTime? dischargeDate,
+    String? admissionType,
+    String? initialDiagnosis,
+    String? dischargeDiagnosis,
+    String? dischargeCondition,
+    String? status,
+    int? totalDays,
+    double? totalBedCost,
+    String? notes,
+    InpatientCPPTModel? latestCPPT,
+  }) {
+    return InpatientAdmissionModel(
+      id: id ?? this.id,
+      admissionNumber: admissionNumber ?? this.admissionNumber,
+      patientId: patientId ?? this.patientId,
+      patientName: patientName ?? this.patientName,
+      patientMrn: patientMrn ?? this.patientMrn,
+      patientPhone: patientPhone ?? this.patientPhone,
+      patientGender: patientGender ?? this.patientGender,
+      patientInsurance: patientInsurance ?? this.patientInsurance,
+      doctorId: doctorId ?? this.doctorId,
+      doctorName: doctorName ?? this.doctorName,
+      doctorSpecialist: doctorSpecialist ?? this.doctorSpecialist,
+      bedId: bedId ?? this.bedId,
+      roomNumber: roomNumber ?? this.roomNumber,
+      roomName: roomName ?? this.roomName,
+      bedNumber: bedNumber ?? this.bedNumber,
+      classType: classType ?? this.classType,
+      dailyRate: dailyRate ?? this.dailyRate,
+      admissionDate: admissionDate ?? this.admissionDate,
+      dischargeDate: dischargeDate ?? this.dischargeDate,
+      admissionType: admissionType ?? this.admissionType,
+      initialDiagnosis: initialDiagnosis ?? this.initialDiagnosis,
+      dischargeDiagnosis: dischargeDiagnosis ?? this.dischargeDiagnosis,
+      dischargeCondition: dischargeCondition ?? this.dischargeCondition,
+      status: status ?? this.status,
+      totalDays: totalDays ?? this.totalDays,
+      totalBedCost: totalBedCost ?? this.totalBedCost,
+      notes: notes ?? this.notes,
+      latestCPPT: latestCPPT ?? this.latestCPPT,
+    );
+  }
 }
 
 class InpatientCPPTModel {
@@ -1046,6 +1317,8 @@ class InpatientCPPTModel {
   final double? temperature;
   final int? respiratoryRate;
   final int? oxygenSaturation;
+
+  DateTime get createdAt => recordedAt;
 
   factory InpatientCPPTModel.fromJson(Map<String, dynamic> json) {
     return InpatientCPPTModel(

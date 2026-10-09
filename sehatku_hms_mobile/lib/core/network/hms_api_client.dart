@@ -62,6 +62,7 @@ class HmsApiClient {
       final response = await _dio.post(
         '/doctors',
         data: {
+          if (doctor.id.isNotEmpty) 'id': doctor.id,
           'name': doctor.name,
           'licenseNumber': doctor.licenseNumber,
           'departmentId': doctor.departmentId,
@@ -118,6 +119,19 @@ class HmsApiClient {
     }
   }
 
+  Future<bool> updateDoctorAvailability(String id, {required bool availableToday}) async {
+    try {
+      final response = await _dio.put(
+        '/doctors/$id',
+        data: {'availableToday': availableToday},
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('[HmsApiClient] updateDoctorAvailability error: $e');
+      return false;
+    }
+  }
+
   Future<String?> uploadDoctorAvatar(String base64Data, [String? fileName]) async {
     try {
       final response = await _dio.post(
@@ -162,6 +176,7 @@ class HmsApiClient {
       final response = await _dio.post(
         '/patients',
         data: {
+          if (patient.id.isNotEmpty) 'id': patient.id,
           'medicalRecordNumber': patient.medicalRecordNumber,
           'name': patient.name,
           'nik': patient.nik,
@@ -248,6 +263,39 @@ class HmsApiClient {
     return [];
   }
 
+  Future<AppointmentSlotConfig?> getAppointmentConfig() async {
+    try {
+      final response = await _dio.get('/appointments/config');
+      if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
+        return AppointmentSlotConfig.fromJson(response.data as Map<String, dynamic>);
+      }
+    } catch (e) {
+      debugPrint('[HmsApiClient] getAppointmentConfig error: $e');
+    }
+    return null;
+  }
+
+  Future<AppointmentSlotConfig?> updateAppointmentConfig({
+    List<String>? timeSlots,
+    List<String>? quickReasons,
+  }) async {
+    try {
+      final response = await _dio.patch(
+        '/appointments/config',
+        data: {
+          if (timeSlots != null) 'timeSlots': timeSlots,
+          if (quickReasons != null) 'quickReasons': quickReasons,
+        },
+      );
+      if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
+        return AppointmentSlotConfig.fromJson(response.data as Map<String, dynamic>);
+      }
+    } catch (e) {
+      debugPrint('[HmsApiClient] updateAppointmentConfig error: $e');
+    }
+    return null;
+  }
+
   Future<Appointment?> createAppointment({
     String? id,
     required String doctorId,
@@ -256,18 +304,20 @@ class HmsApiClient {
     required String appointmentTime,
     required String departmentName,
     String? reason,
+    String? appointmentDate,
   }) async {
     try {
       final response = await _dio.post(
         '/appointments',
         data: {
-          'id': ?id,
+          'id': id,
           'doctorId': doctorId,
           'patientId': patientId,
           'dateLabel': dateLabel,
           'appointmentTime': appointmentTime,
           'departmentName': departmentName,
           'reason': reason,
+          if (appointmentDate != null) 'appointmentDate': appointmentDate,
         },
       );
       if (response.statusCode == 201 && response.data != null) {
@@ -1087,6 +1137,41 @@ class HmsApiClient {
     }
   }
 
+  Future<PharmacyMasterConfig?> getPharmacyConfig() async {
+    try {
+      final response = await _dio.get('/pharmacy/config');
+      if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
+        return PharmacyMasterConfig.fromJson(response.data as Map<String, dynamic>);
+      }
+    } catch (e) {
+      debugPrint('[HmsApiClient] getPharmacyConfig error: $e');
+    }
+    return null;
+  }
+
+  Future<PharmacyMasterConfig?> updatePharmacyConfig({
+    List<String>? categories,
+    List<String>? forms,
+    List<String>? units,
+  }) async {
+    try {
+      final response = await _dio.patch(
+        '/pharmacy/config',
+        data: {
+          if (categories != null) 'categories': categories,
+          if (forms != null) 'forms': forms,
+          if (units != null) 'units': units,
+        },
+      );
+      if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
+        return PharmacyMasterConfig.fromJson(response.data as Map<String, dynamic>);
+      }
+    } catch (e) {
+      debugPrint('[HmsApiClient] updatePharmacyConfig error: $e');
+    }
+    return null;
+  }
+
   Future<List<MedicineStock>> getPharmacyInventory({String? query}) async {
     try {
       final response = await _dio.get(
@@ -1103,6 +1188,31 @@ class HmsApiClient {
       debugPrint('[HmsApiClient] getPharmacyInventory error: $e');
     }
     return [];
+  }
+
+  Future<MedicineStock?> createMedicine(MedicineStock item) async {
+    try {
+      final response = await _dio.post(
+        '/pharmacy/inventory',
+        data: {
+          'name': item.name,
+          'category': item.category,
+          'form': item.form,
+          'stock': item.stock,
+          'minStock': item.minStock,
+          'unit': item.unit,
+          'batchNumber': item.batchNumber,
+          'expirationDate': item.expirationDate,
+          'price': item.price,
+        },
+      );
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return _medicineStockFromJson(response.data);
+      }
+    } catch (e) {
+      debugPrint('[HmsApiClient] createMedicine error: $e');
+    }
+    return null;
   }
 
   Future<bool> updateMedicineStock(String id, int quantity) async {
@@ -1319,6 +1429,27 @@ class HmsApiClient {
     return null;
   }
 
+  Future<String?> downloadInpatientCensusExport({
+    String? startDate,
+    String? endDate,
+  }) async {
+    try {
+      final response = await _dio.get(
+        '/analytics/export/inpatient-census',
+        queryParameters: {
+          if (startDate != null && startDate.isNotEmpty) 'startDate': startDate,
+          if (endDate != null && endDate.isNotEmpty) 'endDate': endDate,
+        },
+      );
+      if (response.statusCode == 200) {
+        return response.data?.toString();
+      }
+    } catch (e) {
+      debugPrint('[HmsApiClient] downloadInpatientCensusExport error: $e');
+    }
+    return null;
+  }
+
   // --- JSON DESERIALIZERS ---
 
   ClinicProcedure _clinicProcedureFromJson(dynamic json) {
@@ -1347,15 +1478,15 @@ class HmsApiClient {
       patientName:
           patientMap?['name']?.toString() ??
           map['patientName']?.toString() ??
-          'Nadia Putri',
+          'Pasien',
       patientMrn:
           patientMap?['medicalRecordNumber']?.toString() ??
           map['patientMrn']?.toString() ??
-          'MRN-2026-001',
+          '-',
       doctorName:
           doctorMap?['name']?.toString() ??
           map['doctorName']?.toString() ??
-          'dr. Maya Pratama, Sp.JP',
+          'Dokter',
       doctorSpecialist:
           doctorMap?['specialist']?.toString() ??
           map['doctorSpecialist']?.toString() ??
@@ -1561,14 +1692,20 @@ class HmsApiClient {
     final map = json as Map<String, dynamic>;
     final docName = map['doctor'] != null && map['doctor'] is Map
         ? (map['doctor']['name']?.toString() ?? '')
-        : (map['doctorName']?.toString() ?? 'dr. Maya Pratama, Sp.JP');
+        : (map['doctorName']?.toString() ?? 'Dokter');
     final patName = map['patient'] != null && map['patient'] is Map
         ? (map['patient']['name']?.toString() ?? '')
-        : (map['patientName']?.toString() ?? 'Nadia Putri');
+        : (map['patientName']?.toString() ?? 'Pasien');
 
     final docAvatar = map['doctor'] != null && map['doctor'] is Map
         ? (map['doctor']['avatarUrl']?.toString() ?? map['doctor']['photoUrl']?.toString() ?? '')
         : (map['doctorPhotoUrl']?.toString() ?? map['avatarUrl']?.toString() ?? '');
+
+    final rawDate = map['appointmentDate']?.toString();
+    DateTime? parsedApptDate;
+    if (rawDate != null && rawDate.isNotEmpty) {
+      parsedApptDate = DateTime.tryParse(rawDate);
+    }
 
     return Appointment(
       id: map['id']?.toString() ?? '',
@@ -1583,6 +1720,11 @@ class HmsApiClient {
       cancellationReason: map['cancellationReason']?.toString(),
       reservationNumber: map['reservationNumber']?.toString() ?? map['appointmentNumber']?.toString(),
       doctorPhotoUrl: docAvatar,
+      appointmentDate: parsedApptDate,
+      doctorId: map['doctorId']?.toString() ??
+          (map['doctor'] is Map ? map['doctor']['id']?.toString() : null),
+      patientId: map['patientId']?.toString() ??
+          (map['patient'] is Map ? map['patient']['id']?.toString() : null),
     );
   }
 
