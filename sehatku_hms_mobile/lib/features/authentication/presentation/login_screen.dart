@@ -132,7 +132,89 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         onSelectionChanged: (value) =>
                             _onRoleChanged(value.first),
                       ),
-                      const SizedBox(height: 22),
+                      if (auth.role == UserRole.doctor) ...[
+                        const SizedBox(height: 14),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F8F8),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: AppTheme.primary.withValues(alpha: 0.25),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Row(
+                                children: [
+                                  Icon(
+                                    Icons.badge_outlined,
+                                    size: 15,
+                                    color: AppTheme.navy,
+                                  ),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    'Pilih Akun Dokter Pengujian:',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppTheme.navy,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
+                                children: [
+                                  _DoctorQuickChip(
+                                    label: 'dr. Maya Pratama (Kardio)',
+                                    isSelected:
+                                        emailController.text ==
+                                        'doctor@sehatku.id',
+                                    onTap: () {
+                                      setState(() {
+                                        emailController.text =
+                                            'doctor@sehatku.id';
+                                        passwordController.text = 'password123';
+                                      });
+                                    },
+                                  ),
+                                  _DoctorQuickChip(
+                                    label: 'drg. Rafi Akbar (Gigi)',
+                                    isSelected:
+                                        emailController.text ==
+                                        'rafi@sehatku.id',
+                                    onTap: () {
+                                      setState(() {
+                                        emailController.text =
+                                            'rafi@sehatku.id';
+                                        passwordController.text = 'password123';
+                                      });
+                                    },
+                                  ),
+                                  _DoctorQuickChip(
+                                    label: 'dr. Hendra Wijaya (Interna)',
+                                    isSelected:
+                                        emailController.text ==
+                                        'hendra.wijaya@sehatku-hospital.id',
+                                    onTap: () {
+                                      setState(() {
+                                        emailController.text =
+                                            'hendra.wijaya@sehatku-hospital.id';
+                                        passwordController.text = 'password123';
+                                      });
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 20),
                       TextField(
                         controller: emailController,
                         keyboardType: TextInputType.emailAddress,
@@ -197,6 +279,55 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DoctorQuickChip extends StatelessWidget {
+  const _DoctorQuickChip({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? AppTheme.navy : Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? AppTheme.navy : Colors.grey.shade300,
+            width: isSelected ? 1.5 : 1.0,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppTheme.navy.withValues(alpha: 0.15),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            color: isSelected ? Colors.white : Colors.black87,
           ),
         ),
       ),

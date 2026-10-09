@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/currency_formatter.dart';
+import '../../core/utils/document_template_helper.dart';
+import '../../core/utils/print_helper.dart';
 import '../models/health_models.dart';
 
 void showOfficialReceiptDialog(BuildContext context, Invoice invoice) {
@@ -16,10 +19,7 @@ class OfficialReceiptDialog extends StatelessWidget {
   final Invoice invoice;
 
   String _formatCurrency(double amount) {
-    return 'Rp ${amount.toStringAsFixed(0).replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (Match m) => '${m[1]}.',
-        )}';
+    return CurrencyFormatter.format(amount);
   }
 
   String _terbilang(double n) {
@@ -482,11 +482,22 @@ class OfficialReceiptDialog extends StatelessWidget {
                           flex: 2,
                           child: FilledButton.icon(
                             onPressed: () {
-                              Navigator.pop(context);
+                              final htmlContent =
+                                  DocumentTemplateHelper.generateOfficialReceiptHtml(
+                                invoice: invoice,
+                              );
+                              final safeNumber = invoice.invoiceNumber
+                                  .replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+                              printHtmlDocument(
+                                title: 'Kwitansi_Resmi_$safeNumber',
+                                htmlContent: htmlContent,
+                              );
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('Mencetak Kwitansi Resmi: ${invoice.invoiceNumber}... (PDF Generated)'),
-                                  backgroundColor: AppTheme.success,
+                                  content: Text(
+                                    'Membuka kwitansi resmi ${invoice.invoiceNumber} untuk dicetak / diunduh sebagai PDF.',
+                                  ),
+                                  backgroundColor: AppTheme.primary,
                                 ),
                               );
                             },
@@ -495,7 +506,9 @@ class OfficialReceiptDialog extends StatelessWidget {
                             style: FilledButton.styleFrom(
                               backgroundColor: AppTheme.primary,
                               padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
                           ),
                         ),

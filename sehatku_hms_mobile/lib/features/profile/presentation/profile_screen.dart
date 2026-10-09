@@ -7,6 +7,7 @@ import '../../../shared/models/health_models.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../admin/application/admin_state_providers.dart';
 import '../../authentication/application/auth_controller.dart';
+import '../../patient/presentation/patient_invoices_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -116,6 +117,22 @@ class ProfileScreen extends ConsumerWidget {
               'Nomor Kontak Terdaftar',
               phone,
             ),
+            InkWell(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const PatientInvoicesScreen(),
+                  ),
+                );
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: const _ProfileTile(
+                Icons.receipt_long_outlined,
+                'Tagihan & Kwitansi Resmi',
+                'Lihat rincian faktur & bukti bayar kasir POS',
+                trailing: Icon(Icons.arrow_forward_ios_rounded, size: 14),
+              ),
+            ),
           ] else if (isDoctor) ...[
             _ProfileTile(
               Icons.medical_services_outlined,
@@ -165,10 +182,11 @@ class ProfileScreen extends ConsumerWidget {
 }
 
 class _ProfileTile extends StatelessWidget {
-  const _ProfileTile(this.icon, this.title, this.subtitle);
+  const _ProfileTile(this.icon, this.title, this.subtitle, {this.trailing});
   final IconData icon;
   final String title;
   final String subtitle;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) => Card(
@@ -181,6 +199,7 @@ class _ProfileTile extends StatelessWidget {
           ),
           title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
           subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
+          trailing: trailing,
         ),
       );
 }

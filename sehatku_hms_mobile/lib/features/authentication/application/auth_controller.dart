@@ -19,6 +19,9 @@ class AuthState {
     this.doctorId,
     this.doctorSpecialist,
     this.doctorDepartment,
+    this.doctorLicenseNumber,
+    this.doctorPracticeStatus = 'Aktif Melayani',
+    this.doctorAvailableToday = true,
     this.patientId,
     this.patientMrn,
     this.errorMessage,
@@ -35,6 +38,9 @@ class AuthState {
   final String? doctorId;
   final String? doctorSpecialist;
   final String? doctorDepartment;
+  final String? doctorLicenseNumber;
+  final String? doctorPracticeStatus;
+  final bool? doctorAvailableToday;
   final String? patientId;
   final String? patientMrn;
   final String? errorMessage;
@@ -53,6 +59,9 @@ class AuthState {
     String? doctorId,
     String? doctorSpecialist,
     String? doctorDepartment,
+    String? doctorLicenseNumber,
+    String? doctorPracticeStatus,
+    bool? doctorAvailableToday,
     String? patientId,
     String? patientMrn,
     String? errorMessage,
@@ -69,6 +78,9 @@ class AuthState {
         doctorId: doctorId ?? this.doctorId,
         doctorSpecialist: doctorSpecialist ?? this.doctorSpecialist,
         doctorDepartment: doctorDepartment ?? this.doctorDepartment,
+        doctorLicenseNumber: doctorLicenseNumber ?? this.doctorLicenseNumber,
+        doctorPracticeStatus: doctorPracticeStatus ?? this.doctorPracticeStatus,
+        doctorAvailableToday: doctorAvailableToday ?? this.doctorAvailableToday,
         patientId: patientId ?? this.patientId,
         patientMrn: patientMrn ?? this.patientMrn,
         errorMessage: errorMessage,
@@ -90,6 +102,9 @@ class AuthController extends Notifier<AuthState> {
   static const _kDoctorIdKey = 'auth_doctor_id';
   static const _kDoctorSpecialistKey = 'auth_doctor_specialist';
   static const _kDoctorDepartmentKey = 'auth_doctor_dept';
+  static const _kDoctorLicenseKey = 'auth_doctor_license';
+  static const _kDoctorPracticeStatusKey = 'auth_doctor_practice_status';
+  static const _kDoctorAvailableTodayKey = 'auth_doctor_avail_today';
   static const _kPatientIdKey = 'auth_patient_id';
   static const _kPatientMrnKey = 'auth_patient_mrn';
 
@@ -112,6 +127,9 @@ class AuthController extends Notifier<AuthState> {
       final doctorId = prefs.getString(_kDoctorIdKey);
       final doctorSpecialist = prefs.getString(_kDoctorSpecialistKey);
       final doctorDepartment = prefs.getString(_kDoctorDepartmentKey);
+      final doctorLicenseNumber = prefs.getString(_kDoctorLicenseKey);
+      final doctorPracticeStatus = prefs.getString(_kDoctorPracticeStatusKey) ?? 'Aktif Melayani';
+      final doctorAvailableToday = prefs.getBool(_kDoctorAvailableTodayKey) ?? true;
       final patientId = prefs.getString(_kPatientIdKey);
       final patientMrn = prefs.getString(_kPatientMrnKey);
 
@@ -130,6 +148,9 @@ class AuthController extends Notifier<AuthState> {
         doctorId: doctorId,
         doctorSpecialist: doctorSpecialist,
         doctorDepartment: doctorDepartment,
+        doctorLicenseNumber: doctorLicenseNumber,
+        doctorPracticeStatus: doctorPracticeStatus,
+        doctorAvailableToday: doctorAvailableToday,
         patientId: patientId,
         patientMrn: patientMrn,
       );
@@ -155,6 +176,9 @@ class AuthController extends Notifier<AuthState> {
       final doctorId = prefs.getString(_kDoctorIdKey);
       final doctorSpecialist = prefs.getString(_kDoctorSpecialistKey);
       final doctorDepartment = prefs.getString(_kDoctorDepartmentKey);
+      final doctorLicenseNumber = prefs.getString(_kDoctorLicenseKey);
+      final doctorPracticeStatus = prefs.getString(_kDoctorPracticeStatusKey) ?? 'Aktif Melayani';
+      final doctorAvailableToday = prefs.getBool(_kDoctorAvailableTodayKey) ?? true;
       final patientId = prefs.getString(_kPatientIdKey);
       final patientMrn = prefs.getString(_kPatientMrnKey);
 
@@ -173,6 +197,9 @@ class AuthController extends Notifier<AuthState> {
         doctorId: doctorId,
         doctorSpecialist: doctorSpecialist,
         doctorDepartment: doctorDepartment,
+        doctorLicenseNumber: doctorLicenseNumber,
+        doctorPracticeStatus: doctorPracticeStatus,
+        doctorAvailableToday: doctorAvailableToday,
         patientId: patientId,
         patientMrn: patientMrn,
       );
@@ -205,21 +232,26 @@ class AuthController extends Notifier<AuthState> {
 
         final token = res['accessToken']?.toString();
         final userId = user?['id']?.toString() ?? 'usr-${DateTime.now().millisecondsSinceEpoch}';
-        final userEmail = user?['email']?.toString() ?? email;
         final userFullName = user?['fullName']?.toString() ??
             user?['name']?.toString() ??
             doc?['name']?.toString() ??
             pat?['name']?.toString() ??
-            (detectedRole == UserRole.doctor ? 'dr. Maya Pratama, Sp.JP' : (detectedRole == UserRole.admin ? 'Administrator RS' : 'Nadia Putri'));
+            (detectedRole == UserRole.doctor ? 'Dokter' : (detectedRole == UserRole.admin ? 'Administrator RS' : email.split('@').first));
+        final userEmail = user?['email']?.toString() ?? email;
         final avatarUrl = doc?['avatarUrl']?.toString() ??
             doc?['photoUrl']?.toString() ??
             user?['avatarUrl']?.toString() ??
             user?['photoUrl']?.toString();
-        final doctorId = doc?['id']?.toString() ?? (detectedRole == UserRole.doctor ? '30000000-0000-4000-8000-000000000001' : null);
-        final doctorSpecialist = doc?['specialist']?.toString() ?? (detectedRole == UserRole.doctor ? 'Kardiologi & Vaskular' : null);
-        final doctorDepartment = doc?['departmentName']?.toString() ?? (detectedRole == UserRole.doctor ? 'Kardiologi & Vaskular' : null);
-        final patientId = pat?['id']?.toString() ?? (detectedRole == UserRole.patient ? '40000000-0000-4000-8000-000000000001' : null);
-        final patientMrn = pat?['medicalRecordNumber']?.toString() ?? (detectedRole == UserRole.patient ? 'MRN-2026-001' : null);
+        final doctorId = doc?['id']?.toString();
+        final doctorSpecialist = doc?['specialist']?.toString();
+        final doctorDepartment = doc?['departmentName']?.toString();
+        final doctorLicenseNumber = doc?['licenseNumber']?.toString();
+        final doctorAvailableToday = (doc?['availableToday'] as bool?) ?? true;
+        final doctorPracticeStatus = !doctorAvailableToday
+            ? 'Selesai Praktek'
+            : (doc?['status'] == 'inactive' ? 'Istirahat / Break' : 'Aktif Melayani');
+        final patientId = pat?['id']?.toString();
+        final patientMrn = pat?['medicalRecordNumber']?.toString();
 
         if (token != null && token.isNotEmpty) {
           DioClient.instance.setAuthToken(token);
@@ -237,6 +269,9 @@ class AuthController extends Notifier<AuthState> {
           doctorId: doctorId,
           doctorSpecialist: doctorSpecialist,
           doctorDepartment: doctorDepartment,
+          doctorLicenseNumber: doctorLicenseNumber,
+          doctorPracticeStatus: doctorPracticeStatus,
+          doctorAvailableToday: doctorAvailableToday,
           patientId: patientId,
           patientMrn: patientMrn,
         );
@@ -252,6 +287,9 @@ class AuthController extends Notifier<AuthState> {
           doctorId: doctorId,
           doctorSpecialist: doctorSpecialist,
           doctorDepartment: doctorDepartment,
+          doctorLicenseNumber: doctorLicenseNumber,
+          doctorPracticeStatus: doctorPracticeStatus,
+          doctorAvailableToday: doctorAvailableToday,
           patientId: patientId,
           patientMrn: patientMrn,
         );
@@ -273,11 +311,34 @@ class AuthController extends Notifier<AuthState> {
         demoRole = UserRole.patient;
       }
 
-      final demoName = switch (demoRole) {
+      String demoName = switch (demoRole) {
         UserRole.doctor => 'dr. Maya Pratama, Sp.JP',
         UserRole.admin => 'Administrator RS (Live)',
         UserRole.patient => 'Nadia Putri',
       };
+      String? demoDocId = demoRole == UserRole.doctor ? '30000000-0000-4000-8000-000000000001' : null;
+      String? demoDocDept = demoRole == UserRole.doctor ? 'Kardiologi & Vaskular' : null;
+      String? demoDocSpecialist = demoRole == UserRole.doctor ? 'Kardiologi & Vaskular' : null;
+      String? demoDocLicense = demoRole == UserRole.doctor ? 'SIP.449.1/023/2021' : null;
+      String? demoDocAvatar = demoRole == UserRole.doctor ? '/public/doctors/dr_maya_pratama.jpg' : null;
+
+      if (demoRole == UserRole.doctor) {
+        if (email.contains('rafi') || email.contains('gigi')) {
+          demoName = 'drg. Rafi Akbar, Sp.KG';
+          demoDocId = '30000000-0000-4000-8000-000000000002';
+          demoDocDept = 'Kesehatan Gigi & Mulut';
+          demoDocSpecialist = 'Kesehatan Gigi & Mulut';
+          demoDocLicense = 'SIP.449.1/045/2020';
+          demoDocAvatar = '/public/doctors/drg_rafi_akbar.jpg';
+        } else if (email.contains('hendra') || email.contains('interna')) {
+          demoName = 'dr. Hendra Wijaya, Sp.PD';
+          demoDocId = '30000000-0000-4000-8000-000000000005';
+          demoDocDept = 'Penyakit Dalam';
+          demoDocSpecialist = 'Penyakit Dalam';
+          demoDocLicense = 'SIP.449.1/077/2019';
+          demoDocAvatar = '/public/doctors/dr_hendra_wijaya.jpg';
+        }
+      }
 
       state = state.copyWith(
         isLoading: false,
@@ -285,8 +346,13 @@ class AuthController extends Notifier<AuthState> {
         role: demoRole,
         email: email,
         userFullName: demoName,
-        doctorId: demoRole == UserRole.doctor ? '30000000-0000-4000-8000-000000000001' : null,
-        doctorDepartment: demoRole == UserRole.doctor ? 'Kardiologi & Vaskular' : null,
+        avatarUrl: demoDocAvatar,
+        doctorId: demoDocId,
+        doctorSpecialist: demoDocSpecialist,
+        doctorDepartment: demoDocDept,
+        doctorLicenseNumber: demoDocLicense,
+        doctorPracticeStatus: 'Aktif Melayani',
+        doctorAvailableToday: true,
         patientId: demoRole == UserRole.patient ? '40000000-0000-4000-8000-000000000001' : null,
         patientMrn: demoRole == UserRole.patient ? 'MRN-2026-001' : null,
       );
@@ -296,8 +362,13 @@ class AuthController extends Notifier<AuthState> {
         role: demoRole,
         userFullName: demoName,
         email: email,
-        doctorId: demoRole == UserRole.doctor ? '30000000-0000-4000-8000-000000000001' : null,
-        doctorDepartment: demoRole == UserRole.doctor ? 'Kardiologi & Vaskular' : null,
+        avatarUrl: demoDocAvatar,
+        doctorId: demoDocId,
+        doctorSpecialist: demoDocSpecialist,
+        doctorDepartment: demoDocDept,
+        doctorLicenseNumber: demoDocLicense,
+        doctorPracticeStatus: 'Aktif Melayani',
+        doctorAvailableToday: true,
         patientId: demoRole == UserRole.patient ? '40000000-0000-4000-8000-000000000001' : null,
         patientMrn: demoRole == UserRole.patient ? 'MRN-2026-001' : null,
       );
@@ -312,6 +383,30 @@ class AuthController extends Notifier<AuthState> {
     return false;
   }
 
+  Future<void> updateDoctorPracticeStatus(String newStatus) async {
+    final isAvailable = newStatus == 'Aktif Melayani';
+    state = state.copyWith(
+      doctorPracticeStatus: newStatus,
+      doctorAvailableToday: isAvailable,
+    );
+    try {
+      final prefs = ref.read(sharedPreferencesProvider);
+      await prefs.setString(_kDoctorPracticeStatusKey, newStatus);
+      await prefs.setBool(_kDoctorAvailableTodayKey, isAvailable);
+    } catch (e) {
+      debugPrint('[AuthController] Error saving doctor practice status: $e');
+    }
+
+    if (state.doctorId != null && state.doctorId!.isNotEmpty) {
+      try {
+        final client = ref.read(apiClientProvider);
+        await client.updateDoctorAvailability(state.doctorId!, availableToday: isAvailable);
+      } catch (e) {
+        debugPrint('[AuthController] Failed to sync doctor availability to backend: $e');
+      }
+    }
+  }
+
   Future<void> _saveSessionToPrefs({
     required bool isLoggedIn,
     required UserRole role,
@@ -323,6 +418,9 @@ class AuthController extends Notifier<AuthState> {
     String? doctorId,
     String? doctorSpecialist,
     String? doctorDepartment,
+    String? doctorLicenseNumber,
+    String? doctorPracticeStatus,
+    bool? doctorAvailableToday,
     String? patientId,
     String? patientMrn,
   }) async {
@@ -358,6 +456,21 @@ class AuthController extends Notifier<AuthState> {
       } else {
         await prefs.remove(_kDoctorDepartmentKey);
       }
+      if (doctorLicenseNumber != null) {
+        await prefs.setString(_kDoctorLicenseKey, doctorLicenseNumber);
+      } else {
+        await prefs.remove(_kDoctorLicenseKey);
+      }
+      if (doctorPracticeStatus != null) {
+        await prefs.setString(_kDoctorPracticeStatusKey, doctorPracticeStatus);
+      } else {
+        await prefs.remove(_kDoctorPracticeStatusKey);
+      }
+      if (doctorAvailableToday != null) {
+        await prefs.setBool(_kDoctorAvailableTodayKey, doctorAvailableToday);
+      } else {
+        await prefs.remove(_kDoctorAvailableTodayKey);
+      }
       if (patientId != null) {
         await prefs.setString(_kPatientIdKey, patientId);
       } else {
@@ -380,18 +493,34 @@ class AuthController extends Notifier<AuthState> {
       UserRole.admin => 'Administrator RS (Live)',
       UserRole.patient => 'Nadia Putri',
     };
+    final isDoctor = state.role == UserRole.doctor;
     await _saveSessionToPrefs(
       isLoggedIn: true,
       role: state.role,
       userFullName: state.userFullName ?? demoName,
       email: state.email ?? '${state.role.name}@sehatku.id',
-      doctorId: state.role == UserRole.doctor ? '30000000-0000-4000-8000-000000000001' : null,
-      doctorDepartment: state.role == UserRole.doctor ? 'Kardiologi & Vaskular' : null,
+      avatarUrl: isDoctor ? '/public/doctors/dr_maya_pratama.jpg' : null,
+      doctorId: isDoctor ? '30000000-0000-4000-8000-000000000001' : null,
+      doctorSpecialist: isDoctor ? 'Kardiologi & Vaskular' : null,
+      doctorDepartment: isDoctor ? 'Kardiologi & Vaskular' : null,
+      doctorLicenseNumber: isDoctor ? 'SIP.449.1/023/2021' : null,
+      doctorPracticeStatus: isDoctor ? 'Aktif Melayani' : null,
+      doctorAvailableToday: isDoctor ? true : null,
       patientId: state.role == UserRole.patient ? '40000000-0000-4000-8000-000000000001' : null,
       patientMrn: state.role == UserRole.patient ? 'MRN-2026-001' : null,
     );
     await Future<void>.delayed(const Duration(milliseconds: 200));
-    state = state.copyWith(isLoading: false);
+    state = state.copyWith(
+      isLoading: false,
+      userFullName: state.userFullName ?? demoName,
+      avatarUrl: isDoctor ? '/public/doctors/dr_maya_pratama.jpg' : null,
+      doctorId: isDoctor ? '30000000-0000-4000-8000-000000000001' : null,
+      doctorSpecialist: isDoctor ? 'Kardiologi & Vaskular' : null,
+      doctorDepartment: isDoctor ? 'Kardiologi & Vaskular' : null,
+      doctorLicenseNumber: isDoctor ? 'SIP.449.1/023/2021' : null,
+      doctorPracticeStatus: isDoctor ? 'Aktif Melayani' : null,
+      doctorAvailableToday: isDoctor ? true : null,
+    );
   }
 
   Future<void> signOut() async {

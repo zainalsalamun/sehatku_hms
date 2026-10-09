@@ -144,9 +144,15 @@ class NotificationBellButton extends ConsumerWidget {
 }
 
 class DashboardAppBar extends ConsumerWidget implements PreferredSizeWidget {
-  const DashboardAppBar({required this.title, this.subtitle, super.key});
+  const DashboardAppBar({
+    required this.title,
+    this.subtitle,
+    this.extraActions,
+    super.key,
+  });
   final String title;
   final String? subtitle;
+  final List<Widget>? extraActions;
 
   @override
   Size get preferredSize => const Size.fromHeight(72);
@@ -169,6 +175,7 @@ class DashboardAppBar extends ConsumerWidget implements PreferredSizeWidget {
         ],
       ),
       actions: [
+        if (extraActions != null) ...extraActions!,
         const NotificationBellButton(),
         IconButton(
           tooltip: 'Keluar / Logout',

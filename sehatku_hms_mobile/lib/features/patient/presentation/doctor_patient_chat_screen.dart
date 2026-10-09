@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/doctor_avatar.dart';
 import '../../authentication/application/auth_controller.dart';
 
 class ChatMessage {
@@ -29,11 +30,15 @@ class DoctorPatientChatScreen extends ConsumerStatefulWidget {
     this.doctorName = 'dr. Maya Pratama, Sp.JP',
     this.specialist = 'Spesialis Jantung & Pembuluh Darah',
     this.doctorPhotoUrl = '',
+    this.patientName = 'Nadia Putri',
+    this.isDoctorView = false,
   });
 
   final String doctorName;
   final String specialist;
   final String doctorPhotoUrl;
+  final String patientName;
+  final bool isDoctorView;
 
   @override
   ConsumerState<DoctorPatientChatScreen> createState() =>
@@ -43,41 +48,54 @@ class DoctorPatientChatScreen extends ConsumerStatefulWidget {
 class _DoctorPatientChatScreenState extends ConsumerState<DoctorPatientChatScreen> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
-  bool _isDoctorTyping = false;
+  bool _isTyping = false;
 
-  late final List<ChatMessage> _messages = [
-    ChatMessage(
-      id: 'm1',
-      sender: widget.doctorName,
-      text:
-          'Halo! Ada keluhan apa mengenai resep obat atau tensi darah Anda hari ini?',
-      time: '09:15',
-      isMe: false,
-    ),
-    ChatMessage(
-      id: 'm2',
-      sender: ref.read(authControllerProvider).userFullName ?? 'Saya',
-      text:
-          'Selamat pagi Dok. Tekanan darah saya pagi ini 125/82 mmHg. Sudah jauh lebih stabil, tapi kadang masih ada sedikit pusing di sore hari.',
-      time: '09:18',
-      isMe: true,
-    ),
-    ChatMessage(
-      id: 'm3',
-      sender: widget.doctorName,
-      text:
-          'Bagus sekali tensinya sudah membaik. Pusing ringan di sore hari bisa karena penyesuaian vaskular. Pastikan minum air putih cukup (minimal 2 liter/hari) dan kurangi konsumsi garam berlebih ya.',
-      time: '09:20',
-      isMe: false,
-    ),
-  ];
+  late final List<ChatMessage> _messages = widget.isDoctorView
+      ? [
+          ChatMessage(
+            id: 'm-doc-welcome',
+            sender: widget.doctorName,
+            text:
+                'Halo Bu/Pak ${widget.patientName}, saya ${widget.doctorName}. Ada yang ingin dikonsultasikan terkait hasil pemeriksaan atau terapi obat Anda?',
+            time:
+                '${DateTime.now().hour.toString().padLeft(2, '0')}:${(DateTime.now().minute - 15).clamp(0, 59).toString().padLeft(2, '0')}',
+            isMe: true,
+          ),
+          ChatMessage(
+            id: 'm-pat-question',
+            sender: widget.patientName,
+            text:
+                'Halo dokter, untuk obat tensi Amlodipine apakah tetap diminum rutin setiap pagi setelah sarapan ya dok?',
+            time:
+                '${DateTime.now().hour.toString().padLeft(2, '0')}:${(DateTime.now().minute - 5).clamp(0, 59).toString().padLeft(2, '0')}',
+            isMe: false,
+          ),
+        ]
+      : [
+          ChatMessage(
+            id: 'm-welcome',
+            sender: widget.doctorName,
+            text:
+                'Halo! Saya ${widget.doctorName}. Silakan tuliskan pertanyaan atau keluhan Anda seputar sesi konsultasi dan petunjuk medis.',
+            time:
+                '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}',
+            isMe: false,
+          ),
+        ];
 
-  final List<String> _quickPrompts = [
-    'Konsultasi hasil lab terbaru',
-    'Apakah dosis obat tetap diminum?',
-    'Jadwal kontrol berikutnya kapan ya dok?',
-    'Ada pantangan makanan khusus?',
-  ];
+  late final List<String> _quickPrompts = widget.isDoctorView
+      ? [
+          'Tetap diminum 1x sehari setelah sarapan ya.',
+          'Hasil lab Anda normal, lanjutkan terapi.',
+          'Jadwalkan kontrol ulang 2 minggu lagi.',
+          'Bila ada keluhan sesak memberat, segera ke IGD.',
+        ]
+      : [
+          'Konsultasi hasil lab terbaru',
+          'Apakah dosis obat tetap diminum?',
+          'Jadwal kontrol berikutnya kapan ya dok?',
+          'Ada pantangan makanan khusus?',
+        ];
 
   @override
   void dispose() {
@@ -90,7 +108,9 @@ class _DoctorPatientChatScreenState extends ConsumerState<DoctorPatientChatScree
     final text = promptText ?? _messageController.text.trim();
     if (text.isEmpty) return;
 
-    final myName = ref.read(authControllerProvider).userFullName ?? 'Saya';
+    final myName = widget.isDoctorView
+        ? widget.doctorName
+        : (ref.read(authControllerProvider).userFullName ?? 'Saya');
     final now = TimeOfDay.now();
     final timeStr =
         '${now.hour.toString().padLeft(2, "0")}:${now.minute.toString().padLeft(2, "0")}';
@@ -112,17 +132,23 @@ class _DoctorPatientChatScreenState extends ConsumerState<DoctorPatientChatScree
 
     _scrollToBottom();
 
-    // Simulate doctor typing & response
-    setState(() => _isDoctorTyping = true);
+    // Simulate reply from the other participant
+    setState(() => _isTyping = true);
     Future.delayed(const Duration(milliseconds: 1400), () {
       if (!mounted) return;
       setState(() {
-        _isDoctorTyping = false;
+        _isTyping = false;
+        final replySender =
+            widget.isDoctorView ? widget.patientName : widget.doctorName;
+        final replyText = widget.isDoctorView
+            ? 'Baik dokter, terima kasih banyak atas petunjuk dan arahannya.'
+            : _generateDoctorReply(text);
+
         _messages.add(
           ChatMessage(
-            id: 'm-doc-${DateTime.now().millisecondsSinceEpoch}',
-            sender: widget.doctorName,
-            text: _generateDoctorReply(text),
+            id: 'm-reply-${DateTime.now().millisecondsSinceEpoch}',
+            sender: replySender,
+            text: replyText,
             time: timeStr,
             isMe: false,
           ),
@@ -166,14 +192,24 @@ class _DoctorPatientChatScreenState extends ConsumerState<DoctorPatientChatScree
           children: [
             Stack(
               children: [
-                CircleAvatar(
-                  backgroundColor: AppTheme.primary.withValues(alpha: 0.2),
-                  backgroundImage: widget.doctorPhotoUrl.isNotEmpty ? NetworkImage(widget.doctorPhotoUrl) : null,
-                  onBackgroundImageError: widget.doctorPhotoUrl.isNotEmpty ? (_, _) {} : null,
-                  child: widget.doctorPhotoUrl.isEmpty
-                      ? const Icon(Icons.person, color: AppTheme.primary, size: 20)
-                      : null,
-                ),
+                if (widget.isDoctorView)
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundColor: Colors.teal.shade100,
+                    child: Text(
+                      widget.patientName.isNotEmpty ? widget.patientName[0].toUpperCase() : 'P',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.teal.shade800,
+                      ),
+                    ),
+                  )
+                else
+                  DoctorAvatar(
+                    photoUrl: widget.doctorPhotoUrl,
+                    name: widget.doctorName,
+                    radius: 20,
+                  ),
                 Positioned(
                   right: 0,
                   bottom: 0,
@@ -195,11 +231,11 @@ class _DoctorPatientChatScreenState extends ConsumerState<DoctorPatientChatScree
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.doctorName,
+                    widget.isDoctorView ? widget.patientName : widget.doctorName,
                     style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                   ),
                   Text(
-                    '${widget.specialist} • Online',
+                    widget.isDoctorView ? 'Pasien Poliklinik (Online)' : '${widget.specialist} • Online',
                     style: const TextStyle(fontSize: 11, color: Colors.green),
                   ),
                 ],
@@ -256,14 +292,20 @@ class _DoctorPatientChatScreenState extends ConsumerState<DoctorPatientChatScree
           ),
 
           // Typing Indicator
-          if (_isDoctorTyping)
+          if (_isTyping)
             Padding(
               padding: const EdgeInsets.only(left: 20, bottom: 8),
               child: Row(
                 children: [
                   Text(
-                    '${widget.doctorName} sedang mengetik...',
-                    style: const TextStyle(fontSize: 11, color: Colors.grey, fontStyle: FontStyle.italic),
+                    widget.isDoctorView
+                        ? '${widget.patientName} sedang mengetik...'
+                        : '${widget.doctorName} sedang mengetik...',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey,
+                      fontStyle: FontStyle.italic,
+                    ),
                   ),
                 ],
               ),
@@ -406,14 +448,10 @@ class _DoctorPatientChatScreenState extends ConsumerState<DoctorPatientChatScree
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            CircleAvatar(
+            DoctorAvatar(
+              photoUrl: widget.doctorPhotoUrl,
+              name: widget.doctorName,
               radius: 14,
-              backgroundColor: AppTheme.primary.withValues(alpha: 0.15),
-              backgroundImage: widget.doctorPhotoUrl.isNotEmpty ? NetworkImage(widget.doctorPhotoUrl) : null,
-              onBackgroundImageError: widget.doctorPhotoUrl.isNotEmpty ? (_, _) {} : null,
-              child: widget.doctorPhotoUrl.isEmpty
-                  ? const Icon(Icons.person, color: AppTheme.primary, size: 14)
-                  : null,
             ),
             const SizedBox(width: 8),
             Flexible(

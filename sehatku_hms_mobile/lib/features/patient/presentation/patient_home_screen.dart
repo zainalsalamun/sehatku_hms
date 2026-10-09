@@ -4,12 +4,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/health_models.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../../../shared/widgets/doctor_avatar.dart';
 import '../../admin/application/admin_state_providers.dart';
 import '../../appointment/presentation/interactive_booking_sheet.dart';
 import '../../authentication/application/auth_controller.dart';
 import '../../notification/application/notifications_provider.dart';
 import '../../doctor/presentation/doctor_detail_sheet.dart';
+import '../../medical_record/presentation/medical_records_screen.dart';
 import 'doctor_patient_chat_screen.dart';
+import 'patient_invoices_screen.dart';
 import 'widgets/queue_ticket_dialog.dart';
 
 class PatientHomeScreen extends ConsumerWidget {
@@ -39,9 +42,8 @@ class PatientHomeScreen extends ConsumerWidget {
           fullQuery.contains(a.patientName.toLowerCase());
     }).toList();
 
-    final upcoming = patientAppointments.isNotEmpty
-        ? patientAppointments.first
-        : (appointments.isNotEmpty ? appointments.first : null);
+    final activeAppointments = patientAppointments.where((a) => !a.isExpired && a.status != 'Selesai' && a.status != 'Dibatalkan').toList();
+    final upcoming = activeAppointments.isNotEmpty ? activeAppointments.first : null;
 
     return Scaffold(
       appBar: DashboardAppBar(
@@ -142,19 +144,24 @@ class PatientHomeScreen extends ConsumerWidget {
                       const SizedBox(height: 12),
                       Row(
                         children: [
-                          CircleAvatar(
-                            radius: 26,
-                            backgroundColor: Colors.white24,
-                            backgroundImage: upcoming.displayDoctorPhotoUrl.isNotEmpty
-                                ? NetworkImage(upcoming.displayDoctorPhotoUrl)
-                                : null,
-                            onBackgroundImageError: upcoming.displayDoctorPhotoUrl.isNotEmpty
-                                ? (_, _) {}
-                                : null,
-                            child: upcoming.displayDoctorPhotoUrl.isEmpty
-                                ? const Icon(Icons.person, color: Colors.white, size: 28)
-                                : null,
-                          ),
+                          Builder(builder: (context) {
+                            final matchingDoc = doctors.cast<Doctor?>().firstWhere(
+                              (d) =>
+                                  d?.name.trim().toLowerCase() == upcoming.doctorName.trim().toLowerCase() ||
+                                  (upcoming.doctorName.toLowerCase().contains(d?.name.toLowerCase() ?? '---')),
+                              orElse: () => null,
+                            );
+                            final upcomingPhoto = upcoming.doctorPhotoUrl.trim().isNotEmpty
+                                ? upcoming.doctorPhotoUrl.trim()
+                                : (matchingDoc?.photoUrl.trim() ?? '');
+                            return DoctorAvatar(
+                              photoUrl: upcomingPhoto,
+                              name: upcoming.doctorName,
+                              radius: 26,
+                              borderColor: Colors.white70,
+                              borderWidth: 1.5,
+                            );
+                          }),
                           const SizedBox(width: 14),
                           Expanded(
                             child: Column(
@@ -242,12 +249,12 @@ class PatientHomeScreen extends ConsumerWidget {
             const SectionHeader('Akses cepat'),
             const SizedBox(height: 12),
             GridView.count(
-              crossAxisCount: compact ? 2 : 4,
-              childAspectRatio: compact ? 1.55 : 1.05,
+              crossAxisCount: compact ? 3 : 6,
+              childAspectRatio: compact ? 1.05 : 1.1,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
               children: [
                 _QuickAction(
                   Icons.search,
@@ -282,6 +289,24 @@ class PatientHomeScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
+                _QuickAction(
+                  Icons.receipt_long_outlined,
+                  'Tagihan Saya',
+                  () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const PatientInvoicesScreen(),
+                    ),
+                  ),
+                ),
+                _QuickAction(
+                  Icons.folder_shared_outlined,
+                  'Rekam Medis',
+                  () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const MedicalRecordsScreen(),
+                    ),
+                  ),
+                ),
               ],
             ),
 
@@ -299,18 +324,22 @@ class PatientHomeScreen extends ConsumerWidget {
                     (appt) => Card(
                       margin: const EdgeInsets.only(bottom: 10),
                       child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: AppColors.primaryOverlay10,
-                          backgroundImage: appt.displayDoctorPhotoUrl.isNotEmpty
-                              ? NetworkImage(appt.displayDoctorPhotoUrl)
-                              : null,
-                          onBackgroundImageError: appt.displayDoctorPhotoUrl.isNotEmpty
-                              ? (_, _) {}
-                              : null,
-                          child: appt.displayDoctorPhotoUrl.isEmpty
-                              ? const Icon(Icons.person, color: AppTheme.primary, size: 22)
-                              : null,
-                        ),
+                        leading: Builder(builder: (context) {
+                          final matchingDoc = doctors.cast<Doctor?>().firstWhere(
+                            (d) =>
+                                d?.name.trim().toLowerCase() == appt.doctorName.trim().toLowerCase() ||
+                                (appt.doctorName.toLowerCase().contains(d?.name.toLowerCase() ?? '---')),
+                            orElse: () => null,
+                          );
+                          final apptPhoto = appt.doctorPhotoUrl.trim().isNotEmpty
+                              ? appt.doctorPhotoUrl.trim()
+                              : (matchingDoc?.photoUrl.trim() ?? '');
+                          return DoctorAvatar(
+                            photoUrl: apptPhoto,
+                            name: appt.doctorName,
+                            radius: 22,
+                          );
+                        }),
                         title: Text(
                           appt.doctorName,
                           style: const TextStyle(fontWeight: FontWeight.w600),
@@ -328,15 +357,15 @@ class PatientHomeScreen extends ConsumerWidget {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: AppColors.getStatusBg(appt.status),
+                                color: AppColors.getStatusBg(appt.displayStatus),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
-                                appt.status,
+                                appt.displayStatus,
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
-                                  color: AppColors.getStatusText(appt.status),
+                                  color: AppColors.getStatusText(appt.displayStatus),
                                 ),
                               ),
                             ),
@@ -374,18 +403,10 @@ class PatientHomeScreen extends ConsumerWidget {
                         horizontal: 16,
                         vertical: 10,
                       ),
-                      leading: CircleAvatar(
+                      leading: DoctorAvatar(
+                        photoUrl: doctor.photoUrl,
+                        name: doctor.name,
                         radius: 26,
-                        backgroundColor: AppColors.primaryOverlay12,
-                        backgroundImage: NetworkImage(doctor.displayPhotoUrl),
-                        onBackgroundImageError: (_, _) {},
-                        child: doctor.displayPhotoUrl.isEmpty
-                            ? const Icon(
-                                Icons.medical_services_outlined,
-                                color: AppColors.primary,
-                                size: 24,
-                              )
-                            : null,
                       ),
                       title: Text(
                         doctor.name,
@@ -547,13 +568,10 @@ class PatientHomeScreen extends ConsumerWidget {
               (doctor) => Card(
                 margin: const EdgeInsets.only(bottom: 8),
                 child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: AppColors.primaryOverlay10,
-                    backgroundImage: NetworkImage(doctor.displayPhotoUrl),
-                    onBackgroundImageError: (_, _) {},
-                    child: doctor.displayPhotoUrl.isEmpty
-                        ? const Icon(Icons.person, color: AppColors.primary)
-                        : null,
+                  leading: DoctorAvatar(
+                    photoUrl: doctor.photoUrl,
+                    name: doctor.name,
+                    radius: 22,
                   ),
                   title: Text(
                     doctor.name,

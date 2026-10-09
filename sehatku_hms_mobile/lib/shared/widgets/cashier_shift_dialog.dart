@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/utils/currency_formatter.dart';
 import '../../features/admin/application/admin_state_providers.dart';
 import '../models/health_models.dart';
 
@@ -139,8 +141,9 @@ class _OpenCashierShiftDialogState
                       'Uang tunai fisik yang ada di laci saat shift dimulai',
                 ),
                 validator: (v) {
-                  if (v == null || v.isEmpty) return 'Kas awal wajib diisi';
-                  if (double.tryParse(v) == null) return 'Nominal tidak valid';
+                  if (v == null || v.trim().isEmpty) return 'Kas awal wajib diisi';
+                  final clean = v.replaceAll(RegExp(r'[^0-9.]'), '');
+                  if (double.tryParse(clean) == null) return 'Nominal tidak valid';
                   return null;
                 },
               ),
@@ -179,8 +182,10 @@ class _OpenCashierShiftDialogState
                         : () async {
                             if (!_formKey.currentState!.validate()) return;
                             setState(() => _isLoading = true);
-                            final initialCash =
-                                double.tryParse(_initialCashCtrl.text) ?? 0;
+                            final clean = _initialCashCtrl.text.replaceAll(RegExp(r'[^0-9.]'), '');
+                            final initialCash = double.tryParse(clean) ?? 0.0;
+                            final messenger = ScaffoldMessenger.of(context);
+                            final navigator = Navigator.of(context);
                             final success = await ref
                                 .read(cashierShiftProvider.notifier)
                                 .openShift(
@@ -193,15 +198,24 @@ class _OpenCashierShiftDialogState
                             if (mounted) {
                               setState(() => _isLoading = false);
                               if (success) {
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                messenger.showSnackBar(
                                   SnackBar(
                                     content: Text(
-                                      'Shift $_shiftName berhasil dibuka dengan kas awal Rp ${NumberFormat('#,###', 'id-ID').format(initialCash)}.',
+                                      'Shift $_shiftName berhasil dibuka dengan kas awal ${CurrencyFormatter.format(initialCash)}.',
                                     ),
-                                    backgroundColor: Colors.teal,
+                                    backgroundColor: AppColors.primary,
                                   ),
                                 );
-                                Navigator.of(context).pop();
+                                navigator.pop();
+                              } else {
+                                messenger.showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Gagal membuka shift kasir. Pastikan server aktif atau periksa koneksi data.',
+                                    ),
+                                    backgroundColor: AppColors.error,
+                                  ),
+                                );
                               }
                             }
                           },
@@ -498,6 +512,8 @@ class _CloseCashierShiftDialogState
                         ? null
                         : () async {
                             setState(() => _isLoading = true);
+                            final navigator = Navigator.of(context, rootNavigator: true);
+                            final rootContext = context;
                             final closedShift = await ref
                                 .read(cashierShiftProvider.notifier)
                                 .closeShift(
@@ -506,10 +522,10 @@ class _CloseCashierShiftDialogState
                                 );
                             if (mounted) {
                               setState(() => _isLoading = false);
-                              Navigator.of(context).pop();
-                              if (closedShift != null) {
+                              navigator.pop();
+                              if (closedShift != null && rootContext.mounted) {
                                 showDialog(
-                                  context: context,
+                                  context: rootContext,
                                   builder: (_) => CashierClosingReceiptDialog(
                                     shift: closedShift,
                                   ),

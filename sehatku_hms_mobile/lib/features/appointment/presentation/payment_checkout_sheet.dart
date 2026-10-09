@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/currency_formatter.dart';
 
 class PaymentCheckoutSheet extends StatefulWidget {
   const PaymentCheckoutSheet({
@@ -78,10 +80,7 @@ class _PaymentCheckoutSheetState extends State<PaymentCheckoutSheet> {
   }
 
   String _formatCurrency(double amount) {
-    return 'Rp ${amount.toStringAsFixed(0).replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (Match m) => '${m[1]}.',
-        )}';
+    return CurrencyFormatter.format(amount);
   }
 
   void _simulatePay() {
@@ -252,7 +251,22 @@ class _PaymentCheckoutSheetState extends State<PaymentCheckoutSheet> {
                       ),
                       child: Column(
                         children: [
-                          Icon(Icons.qr_code_2, size: 140, color: AppTheme.navy),
+                          Padding(
+                            padding: const EdgeInsets.all(4.0),
+                            child: QrImageView(
+                              data: '00020101021226680016ID.CO.SEHATKU.HMS01189360099800000000005204599953033605407${widget.amount.toInt()}5802ID5919SEHATKU_MED_CENTER6007JAKARTA6304',
+                              version: QrVersions.auto,
+                              size: 140,
+                              eyeStyle: const QrEyeStyle(
+                                eyeShape: QrEyeShape.square,
+                                color: AppTheme.navy,
+                              ),
+                              dataModuleStyle: const QrDataModuleStyle(
+                                dataModuleShape: QrDataModuleShape.square,
+                                color: AppTheme.navy,
+                              ),
+                            ),
+                          ),
                           const Text('Scan dengan Aplikasi Bank / E-Wallet Apa Saja',
                               style: TextStyle(fontSize: 11, color: Colors.grey)),
                         ],
