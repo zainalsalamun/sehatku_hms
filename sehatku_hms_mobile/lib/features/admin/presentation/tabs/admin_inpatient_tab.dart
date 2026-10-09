@@ -7,7 +7,9 @@ import '../../../inpatient/application/inpatient_state_providers.dart';
 import '../../../inpatient/presentation/widgets/inpatient_admission_dialog.dart';
 import '../../../inpatient/presentation/widgets/inpatient_cppt_dialog.dart';
 import '../../../inpatient/presentation/widgets/inpatient_discharge_dialog.dart';
+import '../../../inpatient/presentation/widgets/inpatient_discharge_summary_dialog.dart';
 import '../../../inpatient/presentation/widgets/inpatient_transfer_bed_dialog.dart';
+import '../../../reports/presentation/widgets/export_report_dialog.dart';
 import '../widgets/admin_table_container.dart';
 
 class AdminInpatientTab extends ConsumerStatefulWidget {
@@ -141,6 +143,25 @@ class _AdminInpatientTabState extends ConsumerState<AdminInpatientTab> {
                     selected: {_viewMode},
                     onSelectionChanged: (val) => setState(() => _viewMode = val.first),
                   ),
+                ),
+                const SizedBox(width: 10),
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    foregroundColor: Colors.teal.shade800,
+                    side: BorderSide(color: Colors.teal.shade300),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (_) => const ExportReportDialog(
+                        initialType: ReportExportType.inpatientCensus,
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.analytics_outlined, size: 16),
+                  label: const Text('Sensus & BOR (PDF/CSV)', style: TextStyle(fontSize: 12)),
                 ),
               ],
             ),
@@ -593,7 +614,14 @@ class _AdminInpatientTabState extends ConsumerState<AdminInpatientTab> {
                   icon: const Icon(Icons.notes, size: 14),
                   label: const Text('CPPT', style: TextStyle(fontSize: 11)),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 4),
+                IconButton(
+                  tooltip: 'Lembar Resume Medis & Surat Kontrol',
+                  icon: const Icon(Icons.description_outlined, size: 18, color: Colors.indigo),
+                  onPressed: () {
+                    showInpatientDischargeSummaryDialog(context, fullAdmission!);
+                  },
+                ),
                 IconButton(
                   tooltip: 'Pindah Kamar / Bed',
                   icon: const Icon(Icons.swap_horiz, size: 18, color: Colors.orange),
@@ -752,6 +780,13 @@ class _AdminInpatientTabState extends ConsumerState<AdminInpatientTab> {
                       },
                     ),
                     IconButton(
+                      tooltip: 'Lembar Resume Medis & Surat Kontrol',
+                      icon: const Icon(Icons.description_outlined, color: Colors.indigo, size: 18),
+                      onPressed: () {
+                        showInpatientDischargeSummaryDialog(context, a);
+                      },
+                    ),
+                    IconButton(
                       tooltip: 'Pindah Kamar / Bed',
                       icon: const Icon(Icons.swap_horiz, color: Colors.orange, size: 18),
                       onPressed: () {
@@ -844,15 +879,27 @@ class _AdminInpatientTabState extends ConsumerState<AdminInpatientTab> {
               ),
               DataCell(Text(a.dischargeDiagnosis ?? '-', style: const TextStyle(fontSize: 12))),
               DataCell(
-                IconButton(
-                  tooltip: 'Lihat Catatan CPPT',
-                  icon: const Icon(Icons.history_edu, size: 18),
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (_) => InpatientCPPTDialog(admissionId: a.id),
-                    );
-                  },
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      tooltip: 'Lihat Catatan CPPT',
+                      icon: const Icon(Icons.history_edu, size: 18),
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (_) => InpatientCPPTDialog(admissionId: a.id),
+                        );
+                      },
+                    ),
+                    IconButton(
+                      tooltip: 'Lembar Resume Medis & Surat Kontrol',
+                      icon: const Icon(Icons.description_outlined, color: Colors.indigo, size: 18),
+                      onPressed: () {
+                        showInpatientDischargeSummaryDialog(context, a);
+                      },
+                    ),
+                  ],
                 ),
               ),
             ],

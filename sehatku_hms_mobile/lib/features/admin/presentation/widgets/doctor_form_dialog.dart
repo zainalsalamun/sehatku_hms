@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/config/app_env.dart';
 import '../../../../core/providers/api_client_provider.dart';
 import '../../../../core/utils/image_picker_helper.dart';
 import '../../../../shared/models/health_models.dart';
@@ -216,7 +215,7 @@ class _DoctorFormDialogState extends ConsumerState<DoctorFormDialog> {
                 Container(
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: Colors.grey.shade300),
                   ),
@@ -378,7 +377,7 @@ class _DoctorFormDialogState extends ConsumerState<DoctorFormDialog> {
 
                         return Expanded(
                           child: DropdownButtonFormField<String>(
-                            value: effectiveDept,
+                            initialValue: effectiveDept,
                             isExpanded: true,
                             decoration: const InputDecoration(
                               labelText: 'Departemen / Poli *',

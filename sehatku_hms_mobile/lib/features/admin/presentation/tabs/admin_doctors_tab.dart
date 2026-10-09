@@ -7,6 +7,7 @@ import '../../../../shared/widgets/doctor_avatar.dart';
 import '../../application/admin_state_providers.dart';
 import '../widgets/admin_table_container.dart';
 import '../widgets/doctor_form_dialog.dart';
+import '../widgets/doctor_profile_detail_dialog.dart';
 
 class AdminDoctorsTab extends ConsumerStatefulWidget {
   const AdminDoctorsTab({super.key});
@@ -134,6 +135,21 @@ class _AdminDoctorsTabState extends ConsumerState<AdminDoctorsTab> {
     );
   }
 
+  void _openDoctorProfileDialog(
+    BuildContext context,
+    Doctor doctor,
+    String deptName,
+  ) {
+    showDialog(
+      context: context,
+      builder: (_) => DoctorProfileDetailDialog(
+        doctor: doctor,
+        departmentName: deptName,
+        onEditPressed: () => _openDoctorDialog(context, doctor),
+      ),
+    );
+  }
+
   Widget _buildDesktopTable(
     List<Doctor> doctors,
     List<Department> departments,
@@ -165,33 +181,54 @@ class _AdminDoctorsTabState extends ConsumerState<AdminDoctorsTab> {
           return DataRow(
             cells: [
               DataCell(
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    DoctorAvatar(
-                      photoUrl: doc.photoUrl,
-                      name: doc.name,
-                      radius: 18,
-                    ),
-                    const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
+                InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () => _openDoctorProfileDialog(context, doc, dept.name),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          doc.name,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        DoctorAvatar(
+                          photoUrl: doc.photoUrl,
+                          name: doc.name,
+                          radius: 18,
                         ),
-                        Text(
-                          doc.specialist,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey,
-                          ),
+                        const SizedBox(width: 10),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  doc.name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.navy,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(
+                                  Icons.info_outline,
+                                  size: 14,
+                                  color: Colors.grey.shade400,
+                                ),
+                              ],
+                            ),
+                            Text(
+                              doc.specialist,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
+                  ),
                 ),
               ),
               DataCell(
@@ -268,6 +305,12 @@ class _AdminDoctorsTabState extends ConsumerState<AdminDoctorsTab> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
+                      icon: const Icon(Icons.visibility_outlined, size: 18),
+                      tooltip: 'Lihat Profil Lengkap',
+                      onPressed: () =>
+                          _openDoctorProfileDialog(context, doc, dept.name),
+                    ),
+                    IconButton(
                       icon: const Icon(Icons.edit_outlined, size: 18),
                       tooltip: 'Edit Data',
                       onPressed: () => _openDoctorDialog(context, doc),
@@ -301,6 +344,7 @@ class _AdminDoctorsTabState extends ConsumerState<AdminDoctorsTab> {
         );
 
         return ListTile(
+          onTap: () => _openDoctorProfileDialog(context, doc, dept.name),
           leading: DoctorAvatar(
             photoUrl: doc.photoUrl,
             name: doc.name,
@@ -320,9 +364,21 @@ class _AdminDoctorsTabState extends ConsumerState<AdminDoctorsTab> {
               ),
             ],
           ),
-          trailing: IconButton(
-            icon: const Icon(Icons.edit_outlined),
-            onPressed: () => _openDoctorDialog(context, doc),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.visibility_outlined, size: 20),
+                tooltip: 'Lihat Profil',
+                onPressed: () =>
+                    _openDoctorProfileDialog(context, doc, dept.name),
+              ),
+              IconButton(
+                icon: const Icon(Icons.edit_outlined, size: 20),
+                tooltip: 'Edit Data',
+                onPressed: () => _openDoctorDialog(context, doc),
+              ),
+            ],
           ),
         );
       },

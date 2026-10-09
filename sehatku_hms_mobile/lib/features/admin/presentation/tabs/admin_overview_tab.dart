@@ -4,12 +4,12 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/services/queue_voice_service.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/currency_formatter.dart';
 import '../../../../shared/models/health_models.dart';
 import '../../../../shared/widgets/app_widgets.dart';
 import '../../../inpatient/application/inpatient_state_providers.dart';
 import '../../../laboratory/application/laboratory_state_providers.dart';
 import '../../../pharmacy/application/pharmacy_state_providers.dart';
-import '../../../queue/application/queue_display_provider.dart';
 import '../../../queue/presentation/queue_tv_display_screen.dart';
 import '../../application/admin_state_providers.dart';
 
@@ -61,12 +61,16 @@ class _AdminOverviewTabState extends ConsumerState<AdminOverviewTab> {
         .fold<double>(0, (sum, b) => sum + b.amount);
 
     // Queue Metrics
-    final waitingAppointments =
-        appointments.where((a) => a.status == 'Menunggu').toList();
+    final waitingAppointments = appointments
+        .where((a) => !a.isExpired && a.status == 'Menunggu')
+        .toList();
     final checkedInAppointments =
         appointments.where((a) => a.status == 'Checked-in').toList();
     final completedAppointments =
         appointments.where((a) => a.status == 'Selesai').toList();
+    final expiredAppointments = appointments
+        .where((a) => a.isExpired || a.status == 'Tidak Berlaku')
+        .toList();
 
     // Pharmacy & Lab Metrics
     final pendingRx =
@@ -78,8 +82,11 @@ class _AdminOverviewTabState extends ConsumerState<AdminOverviewTab> {
     final filteredAppointments = appointments.where((a) {
       final matchDept = _selectedDeptFilter == 'all' ||
           a.department.toLowerCase().contains(_selectedDeptFilter.toLowerCase());
-      final matchStatus =
-          _selectedStatusFilter == 'all' || a.status == _selectedStatusFilter;
+      final matchStatus = _selectedStatusFilter == 'all'
+          ? true
+          : _selectedStatusFilter == 'Tidak Berlaku'
+              ? (a.isExpired || a.status == 'Tidak Berlaku')
+              : (a.displayStatus == _selectedStatusFilter);
       return matchDept && matchStatus;
     }).toList();
 
@@ -170,19 +177,19 @@ class _AdminOverviewTabState extends ConsumerState<AdminOverviewTab> {
                     label: 'Kapasitas BOR Ranap',
                     value: '$borPercentage%',
                     icon: Icons.single_bed_outlined,
-                    color: borPercentage > 85 ? Colors.red : Colors.teal,
+                    color: borPercentage > 85 ? AppColors.error : AppColors.primary,
                   ),
                   MetricCard(
                     label: 'Resep Farmasi Aktif',
                     value: '$pendingRx',
                     icon: Icons.medication_outlined,
-                    color: Colors.purple,
+                    color: AppColors.info,
                   ),
                   MetricCard(
                     label: 'Pendapatan Lunas',
-                    value: 'Rp ${(totalIncome / 1000000).toStringAsFixed(1)} jt',
+                    value: CurrencyFormatter.formatCompact(totalIncome),
                     icon: Icons.trending_up,
-                    color: AppTheme.success,
+                    color: AppColors.success,
                   ),
                 ],
               );
@@ -198,6 +205,7 @@ class _AdminOverviewTabState extends ConsumerState<AdminOverviewTab> {
             waitingCount: waitingAppointments.length,
             checkedInCount: checkedInAppointments.length,
             completedCount: completedAppointments.length,
+            expiredCount: expiredAppointments.length,
             totalCount: appointments.length,
           ),
           const SizedBox(height: 24),
@@ -293,6 +301,7 @@ class _AdminOverviewTabState extends ConsumerState<AdminOverviewTab> {
     required int waitingCount,
     required int checkedInCount,
     required int completedCount,
+    required int expiredCount,
     required int totalCount,
   }) {
     return Card(
@@ -354,6 +363,8 @@ class _AdminOverviewTabState extends ConsumerState<AdminOverviewTab> {
                   _statusFilterChip('Checked-in ($checkedInCount)', 'Checked-in', Colors.indigo),
                   const SizedBox(width: 8),
                   _statusFilterChip('Selesai ($completedCount)', 'Selesai', Colors.green),
+                  const SizedBox(width: 8),
+                  _statusFilterChip('Tidak Berlaku ($expiredCount)', 'Tidak Berlaku', Colors.grey.shade600),
                 ],
               ),
             ),
@@ -418,13 +429,15 @@ class _AdminOverviewTabState extends ConsumerState<AdminOverviewTab> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: filteredAppointments.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                separatorBuilder: (_, _) => const SizedBox(height: 10),
                 itemBuilder: (context, index) {
                   final appt = filteredAppointments[index];
+                  final isTidakBerlaku = appt.isExpired || appt.status == 'Tidak Berlaku';
                   Color statusColor = Colors.amber.shade800;
                   if (appt.status == 'Checked-in') statusColor = Colors.indigo;
                   if (appt.status == 'Selesai') statusColor = Colors.green;
                   if (appt.status == 'Dibatalkan') statusColor = Colors.red;
+                  if (isTidakBerlaku) statusColor = Colors.grey.shade600;
 
                   return Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -487,7 +500,7 @@ class _AdminOverviewTabState extends ConsumerState<AdminOverviewTab> {
                             border: Border.all(color: statusColor.withValues(alpha: 0.3)),
                           ),
                           child: Text(
-                            appt.status,
+                            appt.displayStatus,
                             style: TextStyle(
                               color: statusColor,
                               fontWeight: FontWeight.bold,
@@ -499,23 +512,31 @@ class _AdminOverviewTabState extends ConsumerState<AdminOverviewTab> {
 
                         // Quick Call Audio Button
                         IconButton(
-                          tooltip: 'Panggil Suara Pasien',
-                          icon: const Icon(Icons.volume_up, color: Colors.teal),
-                          onPressed: () {
-                            QueueVoiceService.callPatient(
-                              queueNumber: appt.queueNumber,
-                              destination: appt.department,
-                            );
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Memanggil suara antrean ${appt.queueNumber} (${appt.patientName}) ke ${appt.department}...',
-                                ),
-                                backgroundColor: Colors.teal,
-                                duration: const Duration(seconds: 2),
-                              ),
-                            );
-                          },
+                          tooltip: isTidakBerlaku
+                              ? 'Jadwal tidak berlaku'
+                              : 'Panggil Suara Pasien',
+                          icon: Icon(
+                            Icons.volume_up,
+                            color: isTidakBerlaku ? Colors.grey : Colors.teal,
+                          ),
+                          onPressed: isTidakBerlaku
+                              ? null
+                              : () {
+                                  QueueVoiceService.instance.announce(
+                                    queueNumber: appt.queueNumber,
+                                    patientName: appt.patientName,
+                                    destination: appt.department,
+                                  );
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Memanggil suara antrean ${appt.queueNumber} (${appt.patientName}) ke ${appt.department}...',
+                                      ),
+                                      backgroundColor: Colors.teal,
+                                      duration: const Duration(seconds: 2),
+                                    ),
+                                  );
+                                },
                         ),
                       ],
                     ),

@@ -62,11 +62,19 @@ class DoctorAvatar extends StatelessWidget {
           width: radius * 2,
           height: radius * 2,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _buildFallback(),
+          errorBuilder: (_, _, _) => _buildFallback(),
         );
       } catch (_) {
         imageWidget = _buildFallback();
       }
+    } else if (trimmed.startsWith('assets/')) {
+      imageWidget = Image.asset(
+        trimmed,
+        width: radius * 2,
+        height: radius * 2,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => _buildFallback(),
+      );
     } else if (trimmed.isNotEmpty) {
       final resolvedUrl = AppEnv.resolveMediaUrl(trimmed);
       imageWidget = Image.network(
@@ -74,7 +82,7 @@ class DoctorAvatar extends StatelessWidget {
         width: radius * 2,
         height: radius * 2,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _buildFallback(),
+        errorBuilder: (_, _, _) => _buildFallback(),
       );
     } else {
       imageWidget = _buildFallback();

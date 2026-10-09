@@ -31,21 +31,19 @@ class _PatientFormDialogState extends ConsumerState<PatientFormDialog> {
 
   final List<String> _genders = ['Laki-laki', 'Perempuan'];
   final List<String> _bloodTypes = [
-    'A+',
-    'B+',
-    'AB+',
-    'O+',
-    'A-',
-    'B-',
-    'AB-',
-    'O-',
+    'A',
+    'B',
+    'AB',
+    'O',
+    'Tidak Tahu',
   ];
   final List<String> _insurances = [
+    'Umum / Mandiri',
     'BPJS Kesehatan Mandiri',
     'BPJS PBI',
     'Prudential Corporate',
     'Allianz Private',
-    'Umum / Mandiri (Tanpa Asuransi)',
+    'Asuransi Mandiri Inhealth',
   ];
 
   @override
@@ -54,9 +52,7 @@ class _PatientFormDialogState extends ConsumerState<PatientFormDialog> {
     final p = widget.patient;
     _nameController = TextEditingController(text: p?.name ?? '');
     _mrnController = TextEditingController(
-      text:
-          p?.medicalRecordNumber ??
-          'MRN-2026-${(100 + (DateTime.now().millisecond % 900)).toString()}',
+      text: p?.medicalRecordNumber ?? '',
     );
     _nikController = TextEditingController(text: p?.nik ?? '');
     _phoneController = TextEditingController(text: p?.phone ?? '');
@@ -67,9 +63,29 @@ class _PatientFormDialogState extends ConsumerState<PatientFormDialog> {
     );
 
     _gender = p?.gender ?? 'Perempuan';
-    _bloodType = p?.bloodType ?? 'O+';
-    _insurance = p?.insuranceProvider ?? 'BPJS Kesehatan Mandiri';
+    _bloodType = p?.bloodType ?? 'Tidak Tahu';
+    _insurance = p?.insuranceProvider ?? 'Umum / Mandiri';
     _birthDate = p?.birthDate ?? DateTime(1995, 1, 1);
+
+    final existingInsurances = ref.read(adminPatientsProvider).map((pt) => pt.insuranceProvider ?? '').where((s) => s.isNotEmpty);
+    for (final ins in existingInsurances) {
+      if (!_insurances.contains(ins)) {
+        _insurances.add(ins);
+      }
+    }
+    if (!_insurances.contains(_insurance)) {
+      _insurances.add(_insurance);
+    }
+
+    if (!_genders.contains(_gender)) {
+      _genders.add(_gender);
+    }
+    if (!_bloodTypes.contains(_bloodType)) {
+      _bloodTypes.add(_bloodType);
+    }
+    if (!_insurances.contains(_insurance)) {
+      _insurances.add(_insurance);
+    }
   }
 
   @override
@@ -100,11 +116,14 @@ class _PatientFormDialogState extends ConsumerState<PatientFormDialog> {
     if (!_formKey.currentState!.validate()) return;
 
     final isEdit = widget.patient != null;
+    final enteredMrn = _mrnController.text.trim();
     final patient = Patient(
       id: isEdit
           ? widget.patient!.id
           : 'p-${DateTime.now().millisecondsSinceEpoch}',
-      medicalRecordNumber: _mrnController.text.trim(),
+      medicalRecordNumber: enteredMrn.isNotEmpty
+          ? enteredMrn
+          : 'MRN-2026-${(1000 + (DateTime.now().millisecondsSinceEpoch % 9000)).toString()}',
       name: _nameController.text.trim(),
       birthDate: _birthDate,
       gender: _gender,
@@ -202,14 +221,33 @@ class _PatientFormDialogState extends ConsumerState<PatientFormDialog> {
                     Expanded(
                       child: TextFormField(
                         controller: _mrnController,
-                        decoration: const InputDecoration(
-                          labelText: 'No. Rekam Medis (MRN) *',
-                          prefixIcon: Icon(Icons.pin_outlined),
-                          border: OutlineInputBorder(),
+                        readOnly: !isEdit,
+                        decoration: InputDecoration(
+                          labelText: isEdit
+                              ? 'No. Rekam Medis (MRN) *'
+                              : 'No. Rekam Medis (Otomatis)',
+                          hintText: isEdit
+                              ? null
+                              : 'Diterbitkan otomatis sistem',
+                          helperText: isEdit
+                              ? null
+                              : 'Auto-generate saat disimpan',
+                          prefixIcon: const Icon(Icons.pin_outlined),
+                          border: const OutlineInputBorder(),
+                          filled: !isEdit,
+                          fillColor: !isEdit
+                              ? Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest
+                                  .withValues(alpha: 0.3)
+                              : null,
                         ),
-                        validator: (v) => v == null || v.trim().isEmpty
-                            ? 'No. Rekam Medis wajib diisi'
-                            : null,
+                        validator: (v) {
+                          if (isEdit && (v == null || v.trim().isEmpty)) {
+                            return 'No. Rekam Medis wajib diisi';
+                          }
+                          return null;
+                        },
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -267,7 +305,9 @@ class _PatientFormDialogState extends ConsumerState<PatientFormDialog> {
                     const SizedBox(width: 16),
                     Expanded(
                       child: DropdownButtonFormField<String>(
-                        initialValue: _gender,
+                        initialValue: _genders.contains(_gender)
+                            ? _gender
+                            : (_genders.isNotEmpty ? _genders.first : null),
                         isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: 'Jenis Kelamin *',
@@ -297,7 +337,9 @@ class _PatientFormDialogState extends ConsumerState<PatientFormDialog> {
                     Expanded(
                       flex: 1,
                       child: DropdownButtonFormField<String>(
-                        initialValue: _bloodType,
+                        initialValue: _bloodTypes.contains(_bloodType)
+                            ? _bloodType
+                            : (_bloodTypes.isNotEmpty ? _bloodTypes.first : null),
                         isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: 'Gol. Darah',
@@ -321,7 +363,9 @@ class _PatientFormDialogState extends ConsumerState<PatientFormDialog> {
                     Expanded(
                       flex: 2,
                       child: DropdownButtonFormField<String>(
-                        initialValue: _insurance,
+                        initialValue: _insurances.contains(_insurance)
+                            ? _insurance
+                            : (_insurances.isNotEmpty ? _insurances.first : null),
                         isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: 'Penjamin / Asuransi *',

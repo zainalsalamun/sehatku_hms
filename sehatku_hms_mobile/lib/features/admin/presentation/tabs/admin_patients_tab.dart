@@ -21,17 +21,20 @@ class _AdminPatientsTabState extends ConsumerState<AdminPatientsTab> {
   int _currentPage = 1;
   int _itemsPerPage = 10;
 
-  final List<String> _insuranceOptions = [
-    'all',
-    'BPJS Kesehatan Mandiri',
-    'BPJS PBI',
-    'Prudential Corporate',
-    'Allianz Private',
-  ];
-
   @override
   Widget build(BuildContext context) {
     final patients = ref.watch(adminPatientsProvider);
+
+    final dynamicInsurances = <String>{
+      'Umum / Mandiri',
+      'BPJS Kesehatan Mandiri',
+      'BPJS PBI',
+      'Prudential Corporate',
+      'Allianz Private',
+      'Asuransi Mandiri Inhealth',
+      ...patients.map((p) => p.insuranceProvider ?? '').where((s) => s.isNotEmpty),
+    }.toList();
+    final insuranceOptions = ['all', ...dynamicInsurances];
 
     final filteredPatients = patients.where((p) {
       final matchesSearch =
@@ -44,7 +47,7 @@ class _AdminPatientsTabState extends ConsumerState<AdminPatientsTab> {
       final matchesInsurance =
           _selectedInsurance == 'all' ||
           (p.insuranceProvider != null &&
-              p.insuranceProvider!.contains(_selectedInsurance));
+              p.insuranceProvider!.toLowerCase().contains(_selectedInsurance.toLowerCase()));
       return matchesSearch && matchesInsurance;
     }).toList();
 
@@ -76,7 +79,7 @@ class _AdminPatientsTabState extends ConsumerState<AdminPatientsTab> {
             actionIcon: Icons.person_add_alt_1_outlined,
             onActionPressed: () => _openPatientDialog(context),
             filterWidget: DropdownButtonFormField<String>(
-              initialValue: _selectedInsurance,
+              initialValue: insuranceOptions.contains(_selectedInsurance) ? _selectedInsurance : 'all',
               isExpanded: true,
               decoration: const InputDecoration(
                 isDense: true,
@@ -86,7 +89,7 @@ class _AdminPatientsTabState extends ConsumerState<AdminPatientsTab> {
                 ),
                 border: OutlineInputBorder(),
               ),
-              items: _insuranceOptions.map((ins) {
+              items: insuranceOptions.map((ins) {
                 return DropdownMenuItem(
                   value: ins,
                   child: Text(
@@ -96,10 +99,12 @@ class _AdminPatientsTabState extends ConsumerState<AdminPatientsTab> {
                 );
               }).toList(),
               onChanged: (val) {
-                if (val != null) setState(() {
-                  _selectedInsurance = val;
-                  _currentPage = 1;
-                });
+                if (val != null) {
+                  setState(() {
+                    _selectedInsurance = val;
+                    _currentPage = 1;
+                  });
+                }
               },
             ),
             currentPage: _currentPage,

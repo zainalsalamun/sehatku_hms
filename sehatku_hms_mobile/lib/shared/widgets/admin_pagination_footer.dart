@@ -87,7 +87,7 @@ class AdminPaginationFooter extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.4),
+            color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.4),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(

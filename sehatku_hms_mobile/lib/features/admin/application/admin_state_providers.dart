@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/providers/api_client_provider.dart';
 import '../../../core/utils/uuid_helper.dart';
@@ -56,52 +57,13 @@ class AdminDepartmentsNotifier extends Notifier<List<Department>> {
   @override
   List<Department> build() {
     _fetchFromApi();
-    return const [
-      Department(
-        id: '20000000-0000-4000-8000-000000000001',
-        name: 'Kardiologi & Vaskular',
-        code: 'KARDIO',
-        doctorCount: 4,
-      ),
-      Department(
-        id: '20000000-0000-4000-8000-000000000002',
-        name: 'Kesehatan Gigi & Mulut',
-        code: 'DENTAL',
-        doctorCount: 3,
-      ),
-      Department(
-        id: '20000000-0000-4000-8000-000000000003',
-        name: 'Pediatri & Tumbuh Kembang',
-        code: 'PEDIATRI',
-        doctorCount: 5,
-      ),
-      Department(
-        id: '20000000-0000-4000-8000-000000000004',
-        name: 'Neurologi & Saraf',
-        code: 'NEURO',
-        doctorCount: 3,
-      ),
-      Department(
-        id: '20000000-0000-4000-8000-000000000005',
-        name: 'Penyakit Dalam',
-        code: 'INTERNA',
-        doctorCount: 6,
-      ),
-      Department(
-        id: '20000000-0000-4000-8000-000000000006',
-        name: 'Mata (Oftalmologi)',
-        code: 'MATA',
-        doctorCount: 2,
-      ),
-    ];
+    return const [];
   }
 
   Future<void> _fetchFromApi() async {
     final client = ref.read(apiClientProvider);
     final depts = await client.getDepartments();
-    if (depts.isNotEmpty) {
-      state = depts;
-    }
+    state = depts;
   }
 
   Future<void> refresh() async => _fetchFromApi();
@@ -131,13 +93,19 @@ class AdminDoctorsNotifier extends Notifier<List<Doctor>> {
 
   Future<void> refresh() async => _fetchFromApi();
 
-  void addDoctor(Doctor doctor) {
+  Future<void> addDoctor(Doctor doctor) async {
     state = [...state, doctor];
-    ref.read(apiClientProvider).createDoctor(doctor);
+    final created = await ref.read(apiClientProvider).createDoctor(doctor);
+    if (created != null) {
+      state = [
+        for (final doc in state)
+          if (doc.id == doctor.id) created else doc,
+      ];
+    }
     ref.read(adminAuditLogsProvider.notifier).log(
           action: 'CREATE',
           resourceType: 'Doctor',
-          resourceId: doctor.id,
+          resourceId: created?.id ?? doctor.id,
           details: 'Menambahkan dokter baru: ${doctor.name} (${doctor.specialist})',
         );
   }
@@ -200,13 +168,19 @@ class AdminPatientsNotifier extends Notifier<List<Patient>> {
 
   Future<void> refresh() async => _fetchFromApi();
 
-  void registerPatient(Patient patient) {
+  Future<void> registerPatient(Patient patient) async {
     state = [patient, ...state];
-    ref.read(apiClientProvider).createPatient(patient);
+    final created = await ref.read(apiClientProvider).createPatient(patient);
+    if (created != null) {
+      state = [
+        for (final p in state)
+          if (p.id == patient.id) created else p,
+      ];
+    }
     ref.read(adminAuditLogsProvider.notifier).log(
           action: 'CREATE',
           resourceType: 'Patient',
-          resourceId: patient.id,
+          resourceId: created?.id ?? patient.id,
           details:
               'Pendaftaran pasien baru: ${patient.name} (${patient.medicalRecordNumber})',
         );
@@ -264,7 +238,19 @@ class AdminAppointmentsNotifier extends Notifier<List<Appointment>> {
     final client = ref.read(apiClientProvider);
     final appts = await client.getAppointments();
     if (appts.isNotEmpty) {
-      state = appts;
+      final docs = ref.read(adminDoctorsProvider);
+      state = appts.map((a) {
+        if (a.doctorPhotoUrl.isNotEmpty) return a;
+        final match = docs.cast<Doctor?>().firstWhere(
+              (d) =>
+                  d?.name.trim().toLowerCase() == a.doctorName.trim().toLowerCase(),
+              orElse: () => null,
+            );
+        if (match != null && match.photoUrl.isNotEmpty) {
+          return a.copyWith(doctorPhotoUrl: match.photoUrl);
+        }
+        return a;
+      }).toList();
     }
   }
 
@@ -274,23 +260,53 @@ class AdminAppointmentsNotifier extends Notifier<List<Appointment>> {
     Appointment appointment, {
     String? patientId,
     String? doctorId,
-  }) {
-    state = [appointment, ...state];
-    ref.read(apiClientProvider).createAppointment(
-          id: appointment.id,
+  }) async {
+    var finalAppt = appointment;
+    if (finalAppt.doctorPhotoUrl.isEmpty) {
+      final docs = ref.read(adminDoctorsProvider);
+      final match = docs.cast<Doctor?>().firstWhere(
+            (d) =>
+                d?.id == doctorId ||
+                d?.name.trim().toLowerCase() ==
+                    appointment.doctorName.trim().toLowerCase(),
+            orElse: () => null,
+          );
+      if (match != null && match.photoUrl.isNotEmpty) {
+        finalAppt = finalAppt.copyWith(doctorPhotoUrl: match.photoUrl);
+      }
+    }
+    state = [finalAppt, ...state];
+    final created = await ref.read(apiClientProvider).createAppointment(
+          id: finalAppt.id,
           patientId: patientId ?? '40000000-0000-4000-8000-000000000001',
           doctorId: doctorId ?? '30000000-0000-4000-8000-000000000001',
-          dateLabel: appointment.dateLabel,
-          appointmentTime: appointment.time,
-          departmentName: appointment.department,
-          reason: appointment.reason,
+          dateLabel: finalAppt.dateLabel,
+          appointmentTime: finalAppt.time,
+          departmentName: finalAppt.department,
+          reason: finalAppt.reason,
+          appointmentDate: finalAppt.appointmentDate != null
+              ? DateFormat('yyyy-MM-dd').format(finalAppt.appointmentDate!)
+              : null,
         );
+    if (created != null) {
+      state = [
+        for (final a in state)
+          if (a.id == finalAppt.id)
+            created.copyWith(
+              doctorPhotoUrl: created.doctorPhotoUrl.isNotEmpty
+                  ? created.doctorPhotoUrl
+                  : finalAppt.doctorPhotoUrl,
+            )
+          else
+            a,
+      ];
+    }
     ref.read(adminAuditLogsProvider.notifier).log(
           action: 'CREATE',
           resourceType: 'Appointment',
-          resourceId: appointment.id,
+          resourceId: finalAppt.id,
           details:
-              'Pendaftaran antrean baru: ${appointment.patientName} (${appointment.queueNumber}) ke ${appointment.doctorName}',
+              'Pendaftaran antrean baru: ${finalAppt.patientName} (${finalAppt.queueNumber}) ke ${finalAppt.doctorName}',
         );
   }
 
@@ -349,6 +365,60 @@ class AdminAppointmentsNotifier extends Notifier<List<Appointment>> {
 final adminAppointmentsProvider =
     NotifierProvider<AdminAppointmentsNotifier, List<Appointment>>(
   AdminAppointmentsNotifier.new,
+);
+
+// --- APPOINTMENT SLOT & REASON CONFIG PROVIDER ---
+
+class AppointmentSlotConfigNotifier extends Notifier<AppointmentSlotConfig> {
+  @override
+  AppointmentSlotConfig build() {
+    _fetchFromApi();
+    return const AppointmentSlotConfig(
+      timeSlots: [
+        '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
+        '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30',
+        '18:30', '19:00', '19:30', '20:00',
+      ],
+      quickReasons: [
+        'Konsultasi Rutin',
+        'Demam & Flu',
+        'Nyeri Dada & Sesak',
+        'Pemeriksaan Gigi',
+        'Kontrol Pasca Obat',
+        'Pusing / Sakit Kepala',
+        'Medical Checkup',
+      ],
+    );
+  }
+
+  Future<void> _fetchFromApi() async {
+    final client = ref.read(apiClientProvider);
+    final config = await client.getAppointmentConfig();
+    if (config != null) {
+      state = config;
+    }
+  }
+
+  Future<void> refresh() async => _fetchFromApi();
+
+  Future<void> updateConfig({
+    List<String>? timeSlots,
+    List<String>? quickReasons,
+  }) async {
+    final client = ref.read(apiClientProvider);
+    final updated = await client.updateAppointmentConfig(
+      timeSlots: timeSlots,
+      quickReasons: quickReasons,
+    );
+    if (updated != null) {
+      state = updated;
+    }
+  }
+}
+
+final appointmentSlotConfigProvider =
+    NotifierProvider<AppointmentSlotConfigNotifier, AppointmentSlotConfig>(
+  AppointmentSlotConfigNotifier.new,
 );
 
 // --- BILLING / INVOICES PROVIDER ---
