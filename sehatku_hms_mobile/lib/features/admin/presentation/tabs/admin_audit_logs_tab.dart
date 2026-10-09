@@ -21,8 +21,6 @@ class _AdminAuditLogsTabState extends ConsumerState<AdminAuditLogsTab> {
   int _currentPage = 1;
   int _rowsPerPage = 10;
 
-  final List<int> _rowsPerPageOptions = [5, 10, 20, 50];
-
   final List<String> _actionOptions = [
     'all',
     'CREATE',

@@ -51,8 +51,8 @@ class AdminReportsTab extends ConsumerWidget {
                         builder: (_) => const ExportReportDialog(),
                       );
                     },
-                    icon: const Icon(Icons.download_outlined, size: 18),
-                    label: const Text('Export Excel / CSV'),
+                    icon: const Icon(Icons.analytics_outlined, size: 18),
+                    label: const Text('Ekspor Laporan (PDF / CSV)'),
                     style: OutlinedButton.styleFrom(
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

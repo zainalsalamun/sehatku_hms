@@ -3,10 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/providers/api_client_provider.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/document_template_helper.dart';
 import '../../../../core/utils/file_download_helper.dart';
+import '../../../../core/utils/print_helper.dart';
 
 enum ReportExportType {
   financial,
+  inpatientCensus,
   morbiLB1,
   pharmacyStock,
   patientVisits,
@@ -28,6 +32,7 @@ class _ExportReportDialogState extends ConsumerState<ExportReportDialog> {
   late ReportExportType _selectedType;
   String _dateRangePreset = 'month'; // 'today', 'week', 'month', 'all'
   bool _isLoading = false;
+  String? _loadingAction;
 
   @override
   void initState() {
@@ -52,135 +57,325 @@ class _ExportReportDialogState extends ConsumerState<ExportReportDialog> {
     return (null, null); // 'all'
   }
 
+  String _getPeriodLabel() {
+    if (_selectedType == ReportExportType.pharmacyStock) {
+      return 'Stok Real-time Saat Ini';
+    }
+    switch (_dateRangePreset) {
+      case 'today':
+        return 'Hari Ini (${DateFormat('d MMM yyyy', 'id_ID').format(DateTime.now())})';
+      case 'week':
+        return '7 Hari Terakhir';
+      case 'month':
+        return 'Bulan Ini (${DateFormat('MMMM yyyy', 'id_ID').format(DateTime.now())})';
+      default:
+        return 'Semua Periode';
+    }
+  }
+
+  Future<String?> _fetchReportCsv() async {
+    final client = ref.read(apiClientProvider);
+    final (start, end) = _calculateDateRange();
+
+    switch (_selectedType) {
+      case ReportExportType.financial:
+        return client.downloadFinancialExport(startDate: start, endDate: end);
+      case ReportExportType.inpatientCensus:
+        return client.downloadInpatientCensusExport(startDate: start, endDate: end);
+      case ReportExportType.morbiLB1:
+        return client.downloadMorbiLB1Export(startDate: start, endDate: end);
+      case ReportExportType.pharmacyStock:
+        return client.downloadPharmacyStockExport();
+      case ReportExportType.patientVisits:
+        return client.downloadPatientVisitsExport(startDate: start, endDate: end);
+    }
+  }
+
+  (String, String, String) _getReportMetadata() {
+    final dateStr = DateFormat('yyyyMMdd').format(DateTime.now());
+    switch (_selectedType) {
+      case ReportExportType.financial:
+        return (
+          'LAPORAN REKAPITULASI KASIR & KEUANGAN',
+          'Rekapitulasi Transaksi Pembayaran, Omzet, dan Metode Bayar',
+          'Laporan_Keuangan_Kasir_$dateStr',
+        );
+      case ReportExportType.inpatientCensus:
+        return (
+          'LAPORAN SENSUS HARIAN RAWAT INAP & INDIKATOR BOR (KARS)',
+          'Sensus Pasien Rawat Inap, Utilisasi Tempat Tidur & Akumulasi Hari Rawat',
+          'Laporan_Sensus_Rawat_Inap_$dateStr',
+        );
+      case ReportExportType.morbiLB1:
+        return (
+          'LAPORAN 10 BESAR PENYAKIT (MORBIDITAS LB1)',
+          'Rekapitulasi Diagnosa ICD-10 Pasien Standar Dinas Kesehatan',
+          'Laporan_LB1_Dinkes_$dateStr',
+        );
+      case ReportExportType.pharmacyStock:
+        return (
+          'LAPORAN MUTASI & VALUASI STOK FARMASI',
+          'Inventori Obat, Nilai Aset Farmasi, dan Batas Minimum Stok',
+          'Laporan_Valuasi_Stok_Farmasi_$dateStr',
+        );
+      case ReportExportType.patientVisits:
+        return (
+          'LAPORAN REKAPITULASI KUNJUNGAN PASIEN',
+          'Daftar Kunjungan Poliklinik per DPJP, Keluhan & Penjamin',
+          'Laporan_Kunjungan_Pasien_$dateStr',
+        );
+    }
+  }
+
+  Future<void> _handleDownloadCsv() async {
+    setState(() {
+      _isLoading = true;
+      _loadingAction = 'csv';
+    });
+
+    final csvContent = await _fetchReportCsv();
+    final (_, _, baseFilename) = _getReportMetadata();
+    final filename = '$baseFilename.csv';
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+        _loadingAction = null;
+      });
+
+      if (csvContent != null) {
+        downloadFileFromText(
+          content: csvContent,
+          filename: filename,
+        );
+
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Laporan spreadsheet ($filename) berhasil diunduh.'),
+            backgroundColor: Colors.green.shade700,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Gagal mengunduh file laporan spreadsheet.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handlePrintPdf() async {
+    setState(() {
+      _isLoading = true;
+      _loadingAction = 'pdf';
+    });
+
+    final csvContent = await _fetchReportCsv();
+    final (title, subtitle, baseFilename) = _getReportMetadata();
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+        _loadingAction = null;
+      });
+
+      if (csvContent != null) {
+        final htmlContent = DocumentTemplateHelper.generateExecutiveReportHtml(
+          reportTitle: title,
+          reportSubtitle: subtitle,
+          period: _getPeriodLabel(),
+          csvContent: csvContent,
+        );
+
+        printHtmlDocument(
+          title: baseFilename,
+          htmlContent: htmlContent,
+        );
+
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Membuka pratinjau dokumen resmi $title untuk cetak / unduh PDF.'),
+            backgroundColor: AppTheme.navy,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Gagal memproses dokumen laporan resmi PDF.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        width: 600,
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Header
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(10),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 640),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppTheme.navy.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.analytics_outlined,
+                      color: AppTheme.navy,
+                      size: 24,
+                    ),
                   ),
-                  child: Icon(Icons.table_view_outlined, color: Colors.green.shade700, size: 24),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Export Laporan Spreadsheet (Excel / .csv)',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                      Text(
-                        'Unduh data terstruktur untuk pembukuan akuntansi, audit, farmasi, atau pelaporan Dinas Kesehatan.',
-                        style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-                      ),
-                    ],
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Ekspor Laporan Eksekutif Rumah Sakit',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        Text(
+                          'Unduh data terstruktur untuk akuntansi, audit KARS, farmasi, atau pelaporan Dinas Kesehatan.',
+                          style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-            const Divider(height: 24),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const Divider(height: 24),
 
-            // Select Report Type
-            const Text(
-              'PILIH JENIS LAPORAN',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.grey),
-            ),
-            const SizedBox(height: 8),
-
-            _typeRadioTile(
-              type: ReportExportType.financial,
-              title: 'Laporan Rekapitulasi Kasir & Keuangan',
-              subtitle: 'Rekap seluruh transaksi invoice, metode bayar (Tunai/QRIS/Debit), dan status tagihan.',
-              icon: Icons.payments_outlined,
-            ),
-            _typeRadioTile(
-              type: ReportExportType.morbiLB1,
-              title: 'Laporan 10 Besar Penyakit (LB1 Dinkes)',
-              subtitle: 'Rekapitulasi agregasi diagnosa ICD-10 dan demografi gender pasien standar Dinas Kesehatan.',
-              icon: Icons.coronavirus_outlined,
-            ),
-            _typeRadioTile(
-              type: ReportExportType.pharmacyStock,
-              title: 'Laporan Mutasi & Valuasi Stok Farmasi',
-              subtitle: 'Daftar stok obat, batch, min. stok, harga pokok, harga jual, dan total nilai aset obat.',
-              icon: Icons.medication_liquid_outlined,
-            ),
-            _typeRadioTile(
-              type: ReportExportType.patientVisits,
-              title: 'Laporan Rekapitulasi Kunjungan Pasien',
-              subtitle: 'Daftar kunjungan poliklinik per dokter DPJP, keluhan, dan penjamin pasien (BPJS/Umum).',
-              icon: Icons.people_outline,
-            ),
-            const SizedBox(height: 14),
-
-            // Date Range Selection (only if applicable)
-            if (_selectedType != ReportExportType.pharmacyStock) ...[
+              // Select Report Type
               const Text(
-                'RENTANG PERIODE LAPORAN',
+                'PILIH JENIS LAPORAN',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.grey),
               ),
               const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
+
+              _typeRadioTile(
+                type: ReportExportType.financial,
+                title: 'Laporan Rekapitulasi Kasir & Keuangan',
+                subtitle: 'Rekap seluruh transaksi invoice, metode bayar (Tunai/QRIS/Debit), dan status tagihan.',
+                icon: Icons.payments_outlined,
+              ),
+              _typeRadioTile(
+                type: ReportExportType.inpatientCensus,
+                title: 'Laporan Sensus Harian Rawat Inap & BOR (KARS)',
+                subtitle: 'Sensus pasien masuk, keluar, hari rawat, occupancy bed, dan rekapitulasi BOR/ALOS.',
+                icon: Icons.hotel_outlined,
+              ),
+              _typeRadioTile(
+                type: ReportExportType.morbiLB1,
+                title: 'Laporan 10 Besar Penyakit (LB1 Dinkes)',
+                subtitle: 'Rekapitulasi agregasi diagnosa ICD-10 dan demografi gender pasien standar Dinas Kesehatan.',
+                icon: Icons.coronavirus_outlined,
+              ),
+              _typeRadioTile(
+                type: ReportExportType.pharmacyStock,
+                title: 'Laporan Mutasi & Valuasi Stok Farmasi',
+                subtitle: 'Daftar stok obat, batch, min. stok, harga pokok, harga jual, dan total nilai aset obat.',
+                icon: Icons.medication_liquid_outlined,
+              ),
+              _typeRadioTile(
+                type: ReportExportType.patientVisits,
+                title: 'Laporan Rekapitulasi Kunjungan Pasien',
+                subtitle: 'Daftar kunjungan poliklinik per dokter DPJP, keluhan, dan penjamin pasien (BPJS/Umum).',
+                icon: Icons.people_outline,
+              ),
+              const SizedBox(height: 12),
+
+              // Date Range Selection (only if applicable)
+              if (_selectedType != ReportExportType.pharmacyStock) ...[
+                const Text(
+                  'RENTANG PERIODE LAPORAN',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.grey),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    _presetChip('Hari Ini', 'today'),
+                    _presetChip('7 Hari Terakhir', 'week'),
+                    _presetChip('Bulan Ini', 'month'),
+                    _presetChip('Semua Periode', 'all'),
+                  ],
+                ),
+                const SizedBox(height: 12),
+              ],
+
+              const Divider(height: 16),
+
+              // Action Buttons: PDF & CSV
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _presetChip('Hari Ini', 'today'),
-                  _presetChip('7 Hari Terakhir', 'week'),
-                  _presetChip('Bulan Ini', 'month'),
-                  _presetChip('Semua Periode', 'all'),
+                  OutlinedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Batal'),
+                  ),
+                  Row(
+                    children: [
+                      // Button 1: PDF Export
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.navy,
+                          side: const BorderSide(color: AppTheme.navy),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        ),
+                        onPressed: _isLoading ? null : _handlePrintPdf,
+                        icon: _isLoading && _loadingAction == 'pdf'
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.navy),
+                              )
+                            : const Icon(Icons.print_outlined, size: 18),
+                        label: Text(_isLoading && _loadingAction == 'pdf' ? 'Memuat PDF...' : 'Cetak / Unduh PDF'),
+                      ),
+                      const SizedBox(width: 8),
+                      // Button 2: CSV Export
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.green.shade700,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                        onPressed: _isLoading ? null : _handleDownloadCsv,
+                        icon: _isLoading && _loadingAction == 'csv'
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Icon(Icons.table_chart_outlined, size: 18),
+                        label: Text(_isLoading && _loadingAction == 'csv' ? 'Mengunduh...' : 'Unduh Excel (.csv)'),
+                      ),
+                    ],
+                  ),
                 ],
               ),
-              const SizedBox(height: 16),
             ],
-
-            const Divider(height: 20),
-
-            // Action Buttons
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                OutlinedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Batal'),
-                ),
-                const SizedBox(width: 12),
-                FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: Colors.green.shade700,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  ),
-                  onPressed: _isLoading ? null : _handleDownload,
-                  icon: _isLoading
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                        )
-                      : const Icon(Icons.download),
-                  label: Text(_isLoading ? 'Mengunduh...' : 'Unduh File Excel (.csv)'),
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -201,10 +396,10 @@ class _ExportReportDialogState extends ConsumerState<ExportReportDialog> {
         margin: const EdgeInsets.only(bottom: 6),
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.green.shade50 : Colors.white,
+          color: isSelected ? AppTheme.navy.withValues(alpha: 0.05) : Colors.white,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: isSelected ? Colors.green.shade400 : Colors.grey.shade200,
+            color: isSelected ? AppTheme.navy : Colors.grey.shade200,
             width: isSelected ? 1.5 : 1,
           ),
         ),
@@ -213,11 +408,12 @@ class _ExportReportDialogState extends ConsumerState<ExportReportDialog> {
             Radio<ReportExportType>(
               value: type,
               groupValue: _selectedType,
+              activeColor: AppTheme.navy,
               onChanged: (v) {
                 if (v != null) setState(() => _selectedType = v);
               },
             ),
-            Icon(icon, color: isSelected ? Colors.green.shade700 : Colors.grey.shade600, size: 20),
+            Icon(icon, color: isSelected ? AppTheme.navy : Colors.grey.shade600, size: 20),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -227,8 +423,8 @@ class _ExportReportDialogState extends ConsumerState<ExportReportDialog> {
                     title,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                      color: isSelected ? Colors.green.shade900 : Colors.black87,
+                      fontSize: 12.5,
+                      color: isSelected ? AppTheme.navy : Colors.black87,
                     ),
                   ),
                   Text(
@@ -249,65 +445,14 @@ class _ExportReportDialogState extends ConsumerState<ExportReportDialog> {
     return ChoiceChip(
       label: Text(label, style: const TextStyle(fontSize: 11)),
       selected: isSelected,
+      selectedColor: AppTheme.navy,
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : Colors.grey.shade800,
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      ),
       onSelected: (sel) {
         if (sel) setState(() => _dateRangePreset = value);
       },
     );
-  }
-
-  Future<void> _handleDownload() async {
-    setState(() => _isLoading = true);
-
-    final client = ref.read(apiClientProvider);
-    final (start, end) = _calculateDateRange();
-    final dateStr = DateFormat('yyyyMMdd').format(DateTime.now());
-
-    String? csvContent;
-    String filename = 'Laporan_SehatKu_$dateStr.csv';
-
-    switch (_selectedType) {
-      case ReportExportType.financial:
-        csvContent = await client.downloadFinancialExport(startDate: start, endDate: end);
-        filename = 'Laporan_Rekap_Keuangan_Kasir_$dateStr.csv';
-        break;
-      case ReportExportType.morbiLB1:
-        csvContent = await client.downloadMorbiLB1Export(startDate: start, endDate: end);
-        filename = 'Laporan_10_Penyakit_LB1_Dinkes_$dateStr.csv';
-        break;
-      case ReportExportType.pharmacyStock:
-        csvContent = await client.downloadPharmacyStockExport();
-        filename = 'Laporan_Valuasi_Stok_Farmasi_$dateStr.csv';
-        break;
-      case ReportExportType.patientVisits:
-        csvContent = await client.downloadPatientVisitsExport(startDate: start, endDate: end);
-        filename = 'Laporan_Kunjungan_Pasien_$dateStr.csv';
-        break;
-    }
-
-    if (mounted) {
-      setState(() => _isLoading = false);
-
-      if (csvContent != null) {
-        downloadFileFromText(
-          content: csvContent,
-          filename: filename,
-        );
-
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Laporan spreadsheet ($filename) berhasil diunduh.'),
-            backgroundColor: Colors.green.shade700,
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Gagal mengunduh file laporan.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
   }
 }

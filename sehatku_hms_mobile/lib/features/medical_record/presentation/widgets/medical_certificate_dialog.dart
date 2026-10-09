@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/document_template_helper.dart';
+import '../../../../core/utils/print_helper.dart';
 import '../../../../shared/models/health_models.dart';
 
 void showMedicalCertificateDialog(
@@ -354,15 +356,24 @@ class MedicalCertificateDialog extends StatelessWidget {
                   Expanded(
                     child: FilledButton.icon(
                       onPressed: () {
+                        final htmlContent =
+                            DocumentTemplateHelper.generateMedicalCertificateHtml(
+                          certificate,
+                        );
+                        final safeNumber = certificate.certificateNumber
+                            .replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+                        printHtmlDocument(
+                          title: '${certificate.type == "sick_leave" ? "Surat_Sakit" : "Surat_Kesehatan"}_$safeNumber',
+                          htmlContent: htmlContent,
+                        );
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
-                              'Surat Medis ${certificate.certificateNumber} berhasil diunduh (PDF)!',
+                              'Membuka dokumen ${certificate.certificateNumber} untuk dicetak / diunduh sebagai PDF.',
                             ),
                             backgroundColor: AppTheme.primary,
                           ),
                         );
-                        Navigator.pop(context);
                       },
                       icon: const Icon(Icons.print_rounded, size: 18),
                       label: const Text('Cetak / Unduh PDF'),

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/admin_pagination_footer.dart';
 import '../../../medical_record/application/certificates_provider.dart';
+import '../../../medical_record/presentation/widgets/create_medical_certificate_dialog.dart';
 import '../../../medical_record/presentation/widgets/medical_certificate_dialog.dart';
 
 class AdminCertificatesTab extends ConsumerStatefulWidget {
@@ -68,10 +70,33 @@ class _AdminCertificatesTabState extends ConsumerState<AdminCertificatesTab> {
                   ),
                 ],
               ),
-              OutlinedButton.icon(
-                onPressed: () => ref.read(medicalCertificatesProvider.notifier).refresh(),
-                icon: const Icon(Icons.refresh, size: 18),
-                label: const Text('Refresh Data'),
+              Row(
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () =>
+                        ref.read(medicalCertificatesProvider.notifier).refresh(),
+                    icon: const Icon(Icons.refresh, size: 18),
+                    label: const Text('Refresh Data'),
+                  ),
+                  const SizedBox(width: 12),
+                  FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                    ),
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (_) => const CreateMedicalCertificateDialog(),
+                      );
+                    },
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Terbitkan Surat Medis'),
+                  ),
+                ],
               ),
             ],
           ),
