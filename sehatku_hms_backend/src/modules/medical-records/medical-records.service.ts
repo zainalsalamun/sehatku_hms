@@ -337,7 +337,59 @@ export class MedicalRecordsService {
         .catch(() => null);
     }
 
-    // Auto-trigger notifications for Patient and Pharmacy/Admin
+    // Auto-create or update Invoice for cashier POS
+    const totalProcedureCost = (dto.procedures || []).reduce((acc, p) => acc + (Number(p.price) || 0), 0);
+    const consultationBaseFee = 150000;
+    const adminFee = 15000;
+    const totalAmount = consultationBaseFee + adminFee + totalProcedureCost;
+    const serviceName = dto.procedures && dto.procedures.length > 0
+      ? `Konsultasi & Tindakan (${dto.procedures.map(p => p.name).slice(0, 2).join(', ')}${dto.procedures.length > 2 ? '...' : ''})`
+      : `Konsultasi Poli ${encounter.doctor?.specialist || 'Umum'}`;
+
+    try {
+      const existingInvoice = resolvedAppointmentId
+        ? await this.prisma.invoice.findFirst({
+            where: { appointmentId: resolvedAppointmentId },
+          })
+        : null;
+
+      if (existingInvoice) {
+        if (existingInvoice.status === 'Menunggu') {
+          await this.prisma.invoice.update({
+            where: { id: existingInvoice.id },
+            data: {
+              amount: totalAmount,
+              serviceName,
+              doctorName: encounter.doctor?.name || existingInvoice.doctorName,
+            },
+          });
+        }
+      } else {
+        const invoiceCount = await this.prisma.invoice.count();
+        const invoiceNumber = `INV-${new Date().getFullYear()}-${(invoiceCount + 101).toString().padStart(3, '0')}`;
+        const hosp = await this.prisma.hospital.findFirst();
+        const targetHospitalId = hosp?.id || '00000001-0000-4000-8000-000000000001';
+
+        await this.prisma.invoice.create({
+          data: {
+            invoiceNumber,
+            hospitalId: targetHospitalId,
+            patientId: resolvedPatientId,
+            appointmentId: resolvedAppointmentId,
+            patientName: encounter.patient?.name || 'Pasien',
+            doctorName: encounter.doctor?.name || 'Dokter Spesialis',
+            serviceName,
+            amount: totalAmount,
+            status: 'Menunggu',
+            paymentMethod: 'Tunai',
+          },
+        });
+      }
+    } catch (e) {
+      console.error('[MedicalRecordsService] Error creating/updating invoice:', e);
+    }
+
+    // Auto-trigger notifications for Patient, Pharmacy, and Cashier/Admin
     try {
       await this.prisma.notification.createMany({
         data: [
@@ -355,6 +407,14 @@ export class MedicalRecordsService {
             message: `E-Resep baru dari ${encounter.doctor?.name || 'Dokter'} untuk pasien ${encounter.patient?.name || 'Pasien'} (${encounter.patient?.medicalRecordNumber || '-'}) siap diracik.`,
             type: 'prescription',
             targetId: encounter.id,
+            isRead: false,
+          },
+          {
+            role: 'admin',
+            title: 'Tagihan Pasien Siap Diproses di Kasir',
+            message: `Tagihan pemeriksaan untuk ${encounter.patient?.name || 'Pasien'} (${encounter.patient?.medicalRecordNumber || '-'}) sebesar Rp ${totalAmount.toLocaleString('id-ID')} siap ditagihkan di loket kasir.`,
+            type: 'billing',
+            targetId: resolvedAppointmentId || encounter.id,
             isRead: false,
           },
         ],

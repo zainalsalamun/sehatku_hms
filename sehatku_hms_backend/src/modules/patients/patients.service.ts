@@ -39,12 +39,26 @@ export class PatientsService {
     return patient;
   }
 
-  async create(dto: CreatePatientDto, hospitalId = 'hosp-001') {
+  async create(dto: CreatePatientDto, hospitalId = '00000001-0000-4000-8000-000000000001') {
+    let targetHospitalId = hospitalId;
+    if (targetHospitalId === 'hosp-001' || !targetHospitalId) {
+      const hosp = await this.prisma.hospital.findFirst();
+      targetHospitalId = hosp?.id || '00000001-0000-4000-8000-000000000001';
+    }
+
+    let mrn = dto.medicalRecordNumber;
+    if (!mrn || !mrn.trim()) {
+      const year = new Date().getFullYear();
+      const count = await this.prisma.patient.count();
+      mrn = `MRN-${year}-${(count + 101).toString().padStart(3, '0')}`;
+    }
+
     return this.prisma.patient.create({
       data: {
         ...dto,
+        medicalRecordNumber: mrn,
         birthDate: new Date(dto.birthDate),
-        hospitalId,
+        hospitalId: targetHospitalId,
       },
     });
   }

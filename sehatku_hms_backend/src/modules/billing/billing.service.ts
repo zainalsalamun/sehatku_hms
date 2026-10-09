@@ -86,6 +86,7 @@ export class BillingService {
           include: {
             encounters: {
               include: {
+                procedures: true,
                 prescriptions: {
                   include: { items: true },
                 },
@@ -100,10 +101,25 @@ export class BillingService {
       throw new NotFoundException(`Invoice dengan ID ${id} tidak ditemukan`);
     }
 
-    // Auto-aggregate line items
+    // Auto-aggregate line items including procedures
     const amountNum = Number(invoice.amount);
     const adminFee = 15000;
-    const consultationFee = Math.max(0, amountNum - adminFee);
+
+    const encounterProcedures =
+      invoice.appointment?.encounters?.flatMap((e: any) => e.procedures || []) || [];
+    const procedureItems = encounterProcedures.map((proc: any) => ({
+      name: `Tindakan: ${proc.name}`,
+      category: 'Tindakan Medis',
+      quantity: 1,
+      unitPrice: Number(proc.price),
+      subtotal: Number(proc.price),
+    }));
+
+    const totalProcedureCost = procedureItems.reduce(
+      (acc: number, item: any) => acc + item.subtotal,
+      0,
+    );
+    const consultationFee = Math.max(0, amountNum - adminFee - totalProcedureCost);
 
     const items = [
       {
@@ -113,6 +129,7 @@ export class BillingService {
         unitPrice: consultationFee,
         subtotal: consultationFee,
       },
+      ...procedureItems,
       {
         name: 'Administrasi Rekam Medis & Pendaftaran RS',
         category: 'Administrasi',
@@ -298,6 +315,38 @@ export class BillingService {
 
   // ===================== CASHIER SHIFT MANAGEMENT =====================
 
+  private formatShift(shift: any) {
+    if (!shift) return null;
+    return {
+      id: shift.id,
+      hospitalId: shift.hospitalId,
+      cashierId: shift.cashierId,
+      cashierName: shift.cashierName,
+      shiftName: shift.shiftName,
+      startTime: shift.startTime,
+      endTime: shift.endTime,
+      initialCash: Number(shift.initialCash) || 0,
+      totalCashReceived: Number(shift.totalCashReceived) || 0,
+      totalQrisReceived: Number(shift.totalQrisReceived) || 0,
+      totalTransferReceived: Number(shift.totalTransferReceived) || 0,
+      totalDebitReceived: Number(shift.totalDebitReceived) || 0,
+      totalTransactions: Number(shift.totalTransactions) || 0,
+      expectedCashEnd: Number(shift.expectedCashEnd) || 0,
+      actualCashCounted:
+        shift.actualCashCounted !== null && shift.actualCashCounted !== undefined
+          ? Number(shift.actualCashCounted)
+          : null,
+      discrepancy:
+        shift.discrepancy !== null && shift.discrepancy !== undefined
+          ? Number(shift.discrepancy)
+          : null,
+      status: shift.status,
+      notes: shift.notes || '',
+      createdAt: shift.createdAt,
+      updatedAt: shift.updatedAt,
+    };
+  }
+
   async openShift(dto: {
     cashierId: string;
     cashierName: string;
@@ -322,7 +371,7 @@ export class BillingService {
       return {
         success: true,
         message: `Shift ${existingOpen.shiftName} sudah aktif untuk kasir ${dto.cashierName}.`,
-        shift: existingOpen,
+        shift: this.formatShift(existingOpen),
       };
     }
 
@@ -352,7 +401,7 @@ export class BillingService {
     return {
       success: true,
       message: `Shift ${shift.shiftName} berhasil dibuka dengan kas awal Rp ${Number(shift.initialCash).toLocaleString('id-ID')}.`,
-      shift,
+      shift: this.formatShift(shift),
     };
   }
 
@@ -407,7 +456,7 @@ export class BillingService {
     const grandTotalSales = totalCash + totalQris + totalTransfer + totalDebit;
 
     return {
-      ...shift,
+      ...this.formatShift(shift),
       liveSummary: {
         initialCash,
         totalCashReceived: totalCash,
@@ -434,7 +483,7 @@ export class BillingService {
       return {
         success: true,
         message: 'Shift ini sudah ditutup sebelumnya.',
-        shift,
+        shift: this.formatShift(shift),
       };
     }
 
@@ -502,7 +551,7 @@ export class BillingService {
     return {
       success: true,
       message: `Shift ${closed.shiftName} berhasil ditutup. Rekap serah terima kasir siap dicetak.`,
-      shift: closed,
+      shift: this.formatShift(closed),
     };
   }
 
@@ -511,7 +560,7 @@ export class BillingService {
       orderBy: { startTime: 'desc' },
       take: 50,
     });
-    return shifts;
+    return shifts.map((s) => this.formatShift(s));
   }
 }
 

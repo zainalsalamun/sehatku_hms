@@ -1,5 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export interface MedicineInventoryItem {
   id: string;
@@ -16,10 +18,44 @@ export interface MedicineInventoryItem {
 }
 
 @Injectable()
-export class PharmacyService {
+export class PharmacyService implements OnModuleInit {
   constructor(private readonly prisma: PrismaService) {}
 
-  // In-memory persistent inventory store synced with formulary
+  private readonly dataFilePath = path.join(process.cwd(), 'data', 'pharmacy_inventory.json');
+
+  onModuleInit() {
+    this.loadInventoryFromDisk();
+  }
+
+  private loadInventoryFromDisk() {
+    try {
+      if (fs.existsSync(this.dataFilePath)) {
+        const raw = fs.readFileSync(this.dataFilePath, 'utf-8');
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          this.inventory = parsed;
+          return;
+        }
+      }
+      this.saveInventoryToDisk();
+    } catch (e) {
+      console.error('[PharmacyService] Failed to load inventory from disk:', e);
+    }
+  }
+
+  private saveInventoryToDisk() {
+    try {
+      const dir = path.dirname(this.dataFilePath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      fs.writeFileSync(this.dataFilePath, JSON.stringify(this.inventory, null, 2), 'utf-8');
+    } catch (e) {
+      console.error('[PharmacyService] Failed to save inventory to disk:', e);
+    }
+  }
+
+  // Persistent inventory store synced with formulary
   private inventory: MedicineInventoryItem[] = [
     {
       id: '78000000-0000-4000-8000-000000000001',
@@ -256,6 +292,37 @@ export class PharmacyService {
     );
   }
 
+  addMedicine(dto: {
+    name: string;
+    category?: string;
+    form?: string;
+    stock?: number;
+    minStock?: number;
+    unit?: string;
+    batchNumber?: string;
+    expirationDate?: string;
+    price?: number;
+  }) {
+    const stock = Number(dto.stock) || 0;
+    const minStock = Number(dto.minStock) || 50;
+    const newItem: MedicineInventoryItem = {
+      id: require('crypto').randomUUID(),
+      name: dto.name,
+      category: dto.category || 'Obat Bebas',
+      form: dto.form || 'Tablet',
+      stock,
+      minStock,
+      unit: dto.unit || 'strip (10 tab)',
+      batchNumber: dto.batchNumber || `BATCH-${Date.now().toString().slice(-6)}`,
+      expirationDate: dto.expirationDate || '2028-12-31',
+      price: Number(dto.price) || 10000,
+      status: stock <= minStock / 2 ? 'critical' : stock <= minStock ? 'low' : 'normal',
+    };
+    this.inventory.unshift(newItem);
+    this.saveInventoryToDisk();
+    return newItem;
+  }
+
   adjustStock(id: string, quantity: number) {
     const item = this.inventory.find((m) => m.id === id);
     if (!item) {
@@ -270,6 +337,8 @@ export class PharmacyService {
     } else {
       item.status = 'normal';
     }
+
+    this.saveInventoryToDisk();
 
     return {
       success: true,
@@ -289,6 +358,146 @@ export class PharmacyService {
       } else if (item.stock <= item.minStock) {
         item.status = 'low';
       }
+      this.saveInventoryToDisk();
     }
+  }
+
+  private readonly configFilePath = path.join(process.cwd(), 'data', 'pharmacy_config.json');
+
+  private readonly defaultCategories = [
+    'Analgesik & Antipiretik',
+    'Antibiotik',
+    'Antihipertensi',
+    'Antasida & Saluran Cerna',
+    'Antihistamin / Alergi',
+    'Suplemen & Vitamin',
+    'Obat Luar / Topikal',
+    'Obat Batuk & Flu',
+    'Kardiologi & Jantung',
+    'Lainnya',
+  ];
+
+  private readonly defaultForms = [
+    'Tablet',
+    'Kaplet',
+    'Kapsul',
+    'Sirup / Suspensi',
+    'Salep / Krim / Gel',
+    'Tetes Mata / Telinga',
+    'Injeksi / Ampul',
+    'Larutan Infus',
+  ];
+
+  private readonly defaultUnits = [
+    'strip (10 tab)',
+    'strip (10 kap)',
+    'botol (60 ml)',
+    'botol (100 ml)',
+    'tube (10 gr)',
+    'tube (15 gr)',
+    'ampul',
+    'vial',
+    'sachet',
+    'box',
+  ];
+
+  private loadConfigFromFile(): { categories: string[]; forms: string[]; units: string[] } {
+    try {
+      if (fs.existsSync(this.configFilePath)) {
+        const raw = fs.readFileSync(this.configFilePath, 'utf-8');
+        const parsed = JSON.parse(raw);
+        if (parsed.categories && parsed.forms && parsed.units) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.error('[PharmacyService] Error reading pharmacy config file:', e);
+    }
+    return {
+      categories: this.defaultCategories,
+      forms: this.defaultForms,
+      units: this.defaultUnits,
+    };
+  }
+
+  private saveConfigToFile(config: { categories: string[]; forms: string[]; units: string[] }) {
+    try {
+      const dir = path.dirname(this.configFilePath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(this.configFilePath, JSON.stringify(config, null, 2), 'utf-8');
+    } catch (e) {
+      console.error('[PharmacyService] Error saving pharmacy config file:', e);
+    }
+  }
+
+  async getPharmacyConfig() {
+    try {
+      const dbConfig = await this.prisma.pharmacyConfig.findFirst();
+      if (dbConfig) {
+        const result = {
+          categories: dbConfig.categories,
+          forms: dbConfig.forms,
+          units: dbConfig.units,
+        };
+        this.saveConfigToFile(result);
+        return result;
+      }
+      // If table exists but empty, create seed row
+      const hosp = await this.prisma.hospital.findFirst();
+      const created = await this.prisma.pharmacyConfig.create({
+        data: {
+          hospitalId: hosp?.id || null,
+          categories: this.defaultCategories,
+          forms: this.defaultForms,
+          units: this.defaultUnits,
+        },
+      });
+      return {
+        categories: created.categories,
+        forms: created.forms,
+        units: created.units,
+      };
+    } catch (e) {
+      // Graceful fallback to persistent JSON file
+      return this.loadConfigFromFile();
+    }
+  }
+
+  async updatePharmacyConfig(dto: { categories?: string[]; forms?: string[]; units?: string[] }) {
+    const current = await this.getPharmacyConfig();
+    const updated = {
+      categories: dto.categories && dto.categories.length > 0 ? dto.categories : current.categories,
+      forms: dto.forms && dto.forms.length > 0 ? dto.forms : current.forms,
+      units: dto.units && dto.units.length > 0 ? dto.units : current.units,
+    };
+
+    try {
+      const dbConfig = await this.prisma.pharmacyConfig.findFirst();
+      if (dbConfig) {
+        await this.prisma.pharmacyConfig.update({
+          where: { id: dbConfig.id },
+          data: {
+            categories: updated.categories,
+            forms: updated.forms,
+            units: updated.units,
+          },
+        });
+      } else {
+        const hosp = await this.prisma.hospital.findFirst();
+        await this.prisma.pharmacyConfig.create({
+          data: {
+            hospitalId: hosp?.id || null,
+            categories: updated.categories,
+            forms: updated.forms,
+            units: updated.units,
+          },
+        });
+      }
+    } catch (e) {
+      console.warn('[PharmacyService] DB update skipped, falling back to disk:', e);
+    }
+
+    this.saveConfigToFile(updated);
+    return updated;
   }
 }

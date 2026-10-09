@@ -48,11 +48,53 @@ export class DoctorsService {
     return this.mapDoctorWithPhoto(doctor);
   }
 
-  async create(dto: CreateDoctorDto, hospitalId = 'hosp-001') {
+  async create(dto: CreateDoctorDto, hospitalId = '00000001-0000-4000-8000-000000000001') {
+    let targetHospitalId = hospitalId;
+    if (targetHospitalId === 'hosp-001' || !targetHospitalId) {
+      const hosp = await this.prisma.hospital.findFirst();
+      targetHospitalId = hosp?.id || '00000001-0000-4000-8000-000000000001';
+    }
+
+    // Resolve targetDepartmentId to ensure valid FK relation
+    let targetDeptId = dto.departmentId;
+    let dept = targetDeptId
+      ? await this.prisma.department.findUnique({ where: { id: targetDeptId } })
+      : null;
+
+    if (!dept) {
+      dept = await this.prisma.department.findFirst({
+        where: {
+          OR: [
+            ...(targetDeptId ? [{ code: targetDeptId }] : []),
+            ...(dto.specialist ? [{ name: { contains: dto.specialist, mode: 'insensitive' as const } }] : []),
+          ],
+        },
+      });
+      if (!dept) {
+        dept = await this.prisma.department.findFirst();
+      }
+      targetDeptId = dept?.id || '20000000-0000-4000-8000-000000000001';
+    }
+
+    let licenseNumber = dto.licenseNumber;
+    if (!licenseNumber || licenseNumber.trim() === '') {
+      licenseNumber = `SIP.449.1/${Date.now().toString().slice(-4)}/${new Date().getFullYear()}`;
+    }
+
     const created = await this.prisma.doctor.create({
       data: {
-        ...dto,
-        hospitalId,
+        id: dto.id || undefined,
+        hospitalId: targetHospitalId,
+        departmentId: targetDeptId,
+        name: dto.name,
+        licenseNumber,
+        specialist: dto.specialist || dept?.name || 'Dokter Umum',
+        experienceYears: dto.experienceYears || 5,
+        phone: dto.phone || null,
+        email: dto.email || null,
+        scheduleDays: dto.scheduleDays || ['Senin', 'Rabu', 'Jumat'],
+        avatarUrl: dto.avatarUrl || null,
+        status: 'active',
       },
       include: { department: true },
     });

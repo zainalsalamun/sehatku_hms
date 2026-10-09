@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Patch,
+  Post,
   Query,
 } from '@nestjs/common';
 import {
@@ -20,6 +21,18 @@ import { PharmacyService } from './pharmacy.service';
 @Controller('pharmacy')
 export class PharmacyController {
   constructor(private readonly pharmacyService: PharmacyService) {}
+
+  @Get('config')
+  @ApiOperation({ summary: 'Mendapatkan opsi master farmasi (kategori, bentuk sediaan, satuan)' })
+  getPharmacyConfig() {
+    return this.pharmacyService.getPharmacyConfig();
+  }
+
+  @Patch('config')
+  @ApiOperation({ summary: 'Memperbarui opsi master farmasi' })
+  updatePharmacyConfig(@Body() dto: { categories?: string[]; forms?: string[]; units?: string[] }) {
+    return this.pharmacyService.updatePharmacyConfig(dto);
+  }
 
   @Get('prescriptions')
   @ApiOperation({ summary: 'Daftar antrean resep obat pasien dari dokter' })
@@ -60,6 +73,12 @@ export class PharmacyController {
   @ApiQuery({ name: 'query', required: false, description: 'Pencarian nama obat atau batch' })
   getInventory(@Query('query') query?: string) {
     return this.pharmacyService.getInventory(query);
+  }
+
+  @Post('inventory')
+  @ApiOperation({ summary: 'Menambahkan item / varian obat baru ke inventori apotek' })
+  addMedicine(@Body() dto: any) {
+    return this.pharmacyService.addMedicine(dto);
   }
 
   @Patch('inventory/:id/stock')

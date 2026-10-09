@@ -34,10 +34,16 @@ export class AuditService {
     ipAddress?: string;
     hospitalId?: string;
   }) {
+    let targetHospitalId = data.hospitalId;
+    if (targetHospitalId === 'hosp-001' || !targetHospitalId) {
+      const hosp = await this.prisma.hospital.findFirst();
+      targetHospitalId = hosp?.id || '00000001-0000-4000-8000-000000000001';
+    }
+
     return this.prisma.auditLog.create({
       data: {
         ...data,
-        hospitalId: data.hospitalId || 'hosp-001',
+        hospitalId: targetHospitalId,
       },
     });
   }

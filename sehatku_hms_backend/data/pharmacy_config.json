@@ -1,0 +1,36 @@
+{
+  "categories": [
+    "Analgesik & Antipiretik",
+    "Antibiotik",
+    "Antihipertensi",
+    "Antasida & Saluran Cerna",
+    "Antihistamin / Alergi",
+    "Suplemen & Vitamin",
+    "Obat Luar / Topikal",
+    "Obat Batuk & Flu",
+    "Kardiologi & Jantung",
+    "Lainnya"
+  ],
+  "forms": [
+    "Tablet",
+    "Kaplet",
+    "Kapsul",
+    "Sirup / Suspensi",
+    "Salep / Krim / Gel",
+    "Tetes Mata / Telinga",
+    "Injeksi / Ampul",
+    "Larutan Infus"
+  ],
+  "units": [
+    "strip (10 tab)",
+    "strip (10 kap)",
+    "botol (60 ml)",
+    "botol (100 ml)",
+    "tube (10 gr)",
+    "tube (15 gr)",
+    "ampul",
+    "vial",
+    "sachet",
+    "box"
+  ]
+}

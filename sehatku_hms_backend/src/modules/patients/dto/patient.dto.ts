@@ -2,10 +2,18 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsDateString, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreatePatientDto {
-  @ApiProperty({ example: 'MRN-2026-005', description: 'Nomor Rekam Medis (MRN)' })
+  @ApiPropertyOptional({ example: 'p-001', description: 'ID Pasien kustom (Opsional)' })
   @IsString()
-  @IsNotEmpty()
-  medicalRecordNumber: string;
+  @IsOptional()
+  id?: string;
+
+  @ApiPropertyOptional({
+    example: 'MRN-2026-005',
+    description: 'Nomor Rekam Medis (MRN) - Otomatis digenerate sistem jika kosong',
+  })
+  @IsString()
+  @IsOptional()
+  medicalRecordNumber?: string;
 
   @ApiProperty({ example: 'Ahmad Fauzi', description: 'Nama lengkap pasien' })
   @IsString()

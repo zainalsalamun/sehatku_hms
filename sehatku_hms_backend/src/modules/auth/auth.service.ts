@@ -94,6 +94,12 @@ export class AuthService {
               specialist: doctor.specialist,
               departmentId: doctor.departmentId,
               departmentName: doctor.department?.name || 'Poliklinik',
+              avatarUrl: doctor.avatarUrl,
+              licenseNumber: doctor.licenseNumber,
+              phone: doctor.phone,
+              scheduleDays: doctor.scheduleDays,
+              availableToday: doctor.availableToday,
+              status: doctor.status,
             }
           : null,
         patient: patient

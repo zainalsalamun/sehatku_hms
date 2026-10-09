@@ -5,9 +5,18 @@ import { PrismaService } from '../../prisma/prisma.service';
 export class DepartmentsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(hospitalId = 'hosp-001') {
+  async findAll(hospitalId?: string) {
+    let targetHospitalId = hospitalId;
+    if (targetHospitalId === 'hosp-001' || !targetHospitalId) {
+      const hosp = await this.prisma.hospital.findFirst();
+      targetHospitalId = hosp?.id || '00000001-0000-4000-8000-000000000001';
+    }
+
     const departments = await this.prisma.department.findMany({
-      where: { hospitalId, status: 'active' },
+      where: {
+        ...(targetHospitalId ? { hospitalId: targetHospitalId } : {}),
+        status: 'active',
+      },
       include: {
         _count: {
           select: { doctors: true },
