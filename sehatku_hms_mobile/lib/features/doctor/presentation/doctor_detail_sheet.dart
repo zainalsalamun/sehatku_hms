@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/health_models.dart';
+import '../../../shared/widgets/doctor_avatar.dart';
 import '../../appointment/presentation/interactive_booking_sheet.dart';
 
 void showDoctorDetailSheet(BuildContext context, Doctor doctor) {
@@ -18,25 +19,12 @@ void showDoctorDetailSheet(BuildContext context, Doctor doctor) {
         padding: const EdgeInsets.fromLTRB(24, 4, 24, 30),
         children: [
           Center(
-            child: CircleAvatar(
+            child: DoctorAvatar(
+              photoUrl: doctor.photoUrl,
+              name: doctor.name,
               radius: 52,
-              backgroundColor: const Color(0xFFE0F4F2),
-              backgroundImage: doctor.displayPhotoUrl.isNotEmpty
-                  ? NetworkImage(doctor.displayPhotoUrl)
-                  : null,
-              onBackgroundImageError: doctor.displayPhotoUrl.isNotEmpty
-                  ? (_, _) {}
-                  : null,
-              child: doctor.displayPhotoUrl.isEmpty
-                  ? Text(
-                      doctor.name.split(' ').where((s) => !s.startsWith('dr.') && !s.startsWith('drg.')).map((s) => s[0]).take(2).join(),
-                      style: const TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w800,
-                        color: AppTheme.primary,
-                      ),
-                    )
-                  : null,
+              borderWidth: 3,
+              borderColor: AppTheme.primary.withValues(alpha: 0.3),
             ),
           ),
           const SizedBox(height: 16),

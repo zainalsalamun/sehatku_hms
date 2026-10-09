@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../shared/models/health_models.dart';
 import '../../application/inpatient_state_providers.dart';
+import 'inpatient_discharge_summary_dialog.dart';
 
 class InpatientDischargeDialog extends ConsumerStatefulWidget {
   const InpatientDischargeDialog({super.key, required this.admission});
@@ -324,65 +325,94 @@ class _InpatientDischargeDialogState
 
                 // Action Buttons
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    OutlinedButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Batal'),
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        showInpatientDischargeSummaryDialog(
+                          context,
+                          admission.copyWith(
+                            dischargeDiagnosis: _dischargeDiagnosisCtrl.text.trim(),
+                            dischargeCondition: _dischargeCondition,
+                            notes: _notesCtrl.text.trim(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.description_outlined, size: 16),
+                      label: const Text('Pratinjau Resume Medis'),
                     ),
-                    const SizedBox(width: 12),
-                    FilledButton.icon(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Colors.green.shade700,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
+                    Row(
+                      children: [
+                        OutlinedButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('Batal'),
                         ),
-                      ),
-                      onPressed: _isLoading
-                          ? null
-                          : () async {
-                              if (!_formKey.currentState!.validate()) return;
-                              setState(() => _isLoading = true);
+                        const SizedBox(width: 12),
+                        FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.green.shade700,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
+                            ),
+                          ),
+                          onPressed: _isLoading
+                              ? null
+                              : () async {
+                                  final messenger = ScaffoldMessenger.of(context);
+                                  final navigator = Navigator.of(context);
+                                  setState(() => _isLoading = true);
 
-                              final res = await ref
-                                  .read(inpatientAdmissionsProvider.notifier)
-                                  .dischargePatient(
-                                    admissionId: admission.id,
-                                    dischargeDiagnosis: _dischargeDiagnosisCtrl
-                                        .text
-                                        .trim(),
-                                    dischargeCondition: _dischargeCondition,
-                                    notes: _notesCtrl.text.trim(),
-                                  );
+                                  final res = await ref
+                                      .read(inpatientAdmissionsProvider.notifier)
+                                      .dischargePatient(
+                                        admissionId: admission.id,
+                                        dischargeDiagnosis: _dischargeDiagnosisCtrl
+                                            .text
+                                            .trim(),
+                                        dischargeCondition: _dischargeCondition,
+                                        notes: _notesCtrl.text.trim(),
+                                      );
 
-                              if (mounted) {
-                                setState(() => _isLoading = false);
-                                Navigator.of(context).pop();
+                                  if (mounted) {
+                                    setState(() => _isLoading = false);
+                                    navigator.pop();
 
-                                if (res != null) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'Pemulangan ${admission.patientName} berhasil! Invoice kamar (${currencyFormat.format(totalRoomCost)}) otomatis diteruskan ke Kasir.',
-                                      ),
-                                      backgroundColor: Colors.green,
-                                    ),
-                                  );
-                                }
-                              }
-                            },
-                      icon: _isLoading
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(Icons.check_circle_outline),
-                      label: const Text('Selesaikan Pemulangan & Buat Invoice'),
+                                    if (res != null) {
+                                      messenger.showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Pemulangan ${admission.patientName} berhasil! Invoice kamar (${currencyFormat.format(totalRoomCost)}) otomatis diteruskan ke Kasir.',
+                                          ),
+                                          backgroundColor: Colors.green,
+                                          action: SnackBarAction(
+                                            label: 'Buka Resume',
+                                            textColor: Colors.white,
+                                            onPressed: () {
+                                              showInpatientDischargeSummaryDialog(
+                                                context,
+                                                res,
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
+                          icon: _isLoading
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.check_circle_outline),
+                          label: const Text('Selesaikan Pemulangan & Buat Invoice'),
+                        ),
+                      ],
                     ),
                   ],
                 ),

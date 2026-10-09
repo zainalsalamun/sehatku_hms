@@ -67,34 +67,40 @@ class _ClinicalEncounterScreenState
 
   // SOAP controllers
   late final TextEditingController _subjectiveController;
-  final _objectiveController = TextEditingController(
-    text:
-        'Keadaan Umum: Tampak sehat, Compos Mentis.\nThorax: Cor S1-S2 murni reguler, Pulmo vesikuler +/+ ronki -/-.\nAbdomen: Supel, bising usus normal, nyeri tekan (-).\nEkstremitas: Hangat, CRT < 2 detik, edema (-).',
-  );
-  final _planController = TextEditingController(
-    text:
-        '1. Edukasi pola makan rendah garam dan olahraga teratur.\n2. Lanjutkan konsumsi obat sesuai anjuran.\n3. Kontrol ulang dalam 30 hari.',
-  );
+  final _objectiveController = TextEditingController();
+  final _planController = TextEditingController();
+
+  void _applyNormalExamTemplate() {
+    setState(() {
+      _objectiveController.text =
+          'Keadaan Umum: Tampak sehat, Compos Mentis.\nThorax: Cor S1-S2 murni reguler, Pulmo vesikuler +/+ ronki -/-.\nAbdomen: Supel, bising usus normal, nyeri tekan (-).\nEkstremitas: Hangat, CRT < 2 detik, edema (-).';
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Template pemeriksaan fisik normal diterapkan'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _applyStandardPlanTemplate() {
+    setState(() {
+      _planController.text =
+          '1. Istirahat yang cukup dan hidrasi cairan adekuat.\n2. Lanjutkan konsumsi obat sesuai aturan pakai dari farmasi.\n3. Kontrol ulang jika keluhan menetap dalam 3-5 hari.';
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Template rencana terapi standar diterapkan'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
 
   // Diagnoses
-  final List<Map<String, String>> _selectedDiagnoses = [
-    {
-      'code': 'I10',
-      'name': 'Essential (primary) hypertension',
-      'type': 'primary',
-    },
-  ];
+  final List<Map<String, String>> _selectedDiagnoses = [];
 
   // Prescriptions
-  final List<PrescriptionInputItem> _prescriptions = [
-    PrescriptionInputItem(
-      medicineName: 'Amlodipine Besylate 5mg',
-      dosage: '5 mg',
-      frequency: '1x sehari pagi',
-      durationDays: 30,
-      instruction: 'Diminum sesudah makan pagi',
-    ),
-  ];
+  final List<PrescriptionInputItem> _prescriptions = [];
 
   // Clinic Procedures
   final List<ClinicProcedure> _selectedProcedures = [];
@@ -201,7 +207,7 @@ class _ClinicalEncounterScreenState
             height: 380,
             child: ListView.separated(
               itemCount: availableProcedures.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
+              separatorBuilder: (_, _) => const Divider(height: 1),
               itemBuilder: (context, idx) {
                 final proc = availableProcedures[idx];
                 final isSelected = _selectedProcedures.any(
@@ -399,6 +405,39 @@ class _ClinicalEncounterScreenState
         ref.read(medicalRecordsProvider.notifier).refresh();
         ref.read(pharmacyPrescriptionsProvider.notifier).refresh();
 
+        // Calculate and sync billing invoice to Cashier POS
+        final totalProcedureCost = _selectedProcedures.fold<double>(
+          0.0,
+          (sum, p) => sum + p.price,
+        );
+        const consultationBaseFee = 150000.0;
+        const adminFee = 15000.0;
+        final totalInvoiceAmount =
+            consultationBaseFee + adminFee + totalProcedureCost;
+        final billingServiceName = _selectedProcedures.isNotEmpty
+            ? 'Konsultasi & Tindakan (${_selectedProcedures.map((p) => p.name).join(', ')})'
+            : 'Konsultasi Poli ${auth.doctorSpecialist ?? widget.appointment.department}';
+
+        final newInvoice = Invoice(
+          id: UuidHelper.generate(),
+          invoiceNumber:
+              'INV-${DateTime.now().year}-${(100 + DateTime.now().second).toString().padLeft(3, '0')}',
+          patientId: patientId,
+          patientName: widget.appointment.patientName,
+          patientMrn: widget.patient?.medicalRecordNumber ?? 'MRN-2026-001',
+          insuranceProvider:
+              widget.patient?.insuranceProvider ?? 'Umum / Mandiri',
+          doctorName: auth.userFullName ?? widget.appointment.doctorName,
+          serviceName: billingServiceName,
+          amount: totalInvoiceAmount,
+          status: 'Menunggu',
+          paymentMethod: 'Tunai',
+          createdAt: DateTime.now(),
+        );
+
+        ref.read(adminBillingProvider.notifier).addInvoice(newInvoice);
+        ref.read(adminBillingProvider.notifier).refresh();
+
         // If certificate issued, add to local certificates provider
         if (_issueSickLeaveCert) {
           final newCert = MedicalCertificate(
@@ -422,10 +461,8 @@ class _ClinicalEncounterScreenState
               .addCertificate(newCert);
         }
 
-        // Add instant notification for Patient and Doctor
-        ref
-            .read(notificationsProvider.notifier)
-            .addNotification(
+        // Add instant notification for Patient and Cashier
+        ref.read(notificationsProvider.notifier).addNotification(
               AppNotification(
                 id: UuidHelper.generate(),
                 role: 'patient',
@@ -434,6 +471,19 @@ class _ClinicalEncounterScreenState
                     'Pemeriksaan oleh ${newRecord.doctor} telah selesai. Diagnosa: $diagSummary. Rekam medis dan e-resep telah diterbitkan.',
                 type: 'clinical',
                 targetId: newRecord.id,
+                isRead: false,
+                createdAt: DateTime.now(),
+              ),
+            );
+        ref.read(notificationsProvider.notifier).addNotification(
+              AppNotification(
+                id: UuidHelper.generate(),
+                role: 'admin',
+                title: 'Tagihan Pasien Siap Diproses di Kasir',
+                message:
+                    'Tagihan pemeriksaan untuk ${widget.appointment.patientName} (${widget.patient?.medicalRecordNumber ?? '-'}) sebesar Rp ${NumberFormat('#,###', 'id_ID').format(totalInvoiceAmount)} siap ditagihkan di loket kasir.',
+                type: 'billing',
+                targetId: newInvoice.id,
                 isRead: false,
                 createdAt: DateTime.now(),
               ),
@@ -735,6 +785,251 @@ class _ClinicalEncounterScreenState
     );
   }
 
+  void _showPastMedicalHistorySheet(BuildContext context) {
+    final allRecords = ref.read(medicalRecordsProvider);
+    final patientName = widget.appointment.patientName;
+    final patientMrn = widget.patient?.medicalRecordNumber ?? 'MRN-2026-001';
+
+    // Match past records for this patient
+    final pastRecords = allRecords.where((r) {
+      final rName = r.diagnosis.toLowerCase();
+      final pName = patientName.toLowerCase();
+      return rName.contains(pName) ||
+          pName.contains(rName) ||
+          r.doctor.isNotEmpty;
+    }).toList();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.75,
+        minChildSize: 0.45,
+        maxChildSize: 0.95,
+        builder: (_, scrollCtrl) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                width: 44,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: AppTheme.navy.withValues(alpha: 0.1),
+                      child: const Icon(
+                        Icons.history_edu_rounded,
+                        color: AppTheme.navy,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Riwayat Rekam Medis Pasien',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.navy,
+                            ),
+                          ),
+                          Text(
+                            '$patientName • No. RM: $patientMrn',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(ctx).pop(),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: pastRecords.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.folder_open_rounded,
+                                size: 48,
+                                color: Colors.grey.shade400,
+                              ),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'Belum Ada Riwayat Kunjungan Terdahulu',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Pasien belum memiliki catatan rekam medis dari kunjungan poliklinik terdahulu.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : ListView.separated(
+                        controller: scrollCtrl,
+                        padding: const EdgeInsets.all(20),
+                        itemCount: pastRecords.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 14),
+                        itemBuilder: (context, idx) {
+                          final rec = pastRecords[idx];
+                          return Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade50,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 3,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            AppTheme.navy.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        rec.date,
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppTheme.navy,
+                                        ),
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    Text(
+                                      'Dokter: ${rec.doctor}',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.grey.shade700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  rec.diagnosis,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                                if (rec.anamnesis.isNotEmpty) ...[
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Anamnesis: ${rec.anamnesis}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade800,
+                                    ),
+                                  ),
+                                ],
+                                if (rec.physicalExam.isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Pemeriksaan Fisik: ${rec.physicalExam}',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey.shade700,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                                if (rec.medicine.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.teal.shade50,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: Colors.teal.shade200,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.medication_outlined,
+                                          size: 14,
+                                          color: Colors.teal.shade800,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: Text(
+                                            'Terapi: ${rec.medicine}',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.teal.shade900,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final patientName = widget.appointment.patientName;
@@ -751,13 +1046,7 @@ class _ClinicalEncounterScreenState
           IconButton(
             tooltip: 'Riwayat Kunjungan Pasien',
             icon: const Icon(Icons.history_edu_outlined),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Membuka rekam medis kunjungan terdahulu...'),
-                ),
-              );
-            },
+            onPressed: () => _showPastMedicalHistorySheet(context),
           ),
         ],
       ),
@@ -1068,6 +1357,21 @@ class _ClinicalEncounterScreenState
                           : null,
                     ),
                     const SizedBox(height: 14),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Pemeriksaan Fisik (Objektif)',
+                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                        ),
+                        TextButton.icon(
+                          onPressed: _applyNormalExamTemplate,
+                          icon: const Icon(Icons.flash_on, size: 16),
+                          label: const Text('Gunakan Template Normal', style: TextStyle(fontSize: 12)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
                     TextFormField(
                       controller: _objectiveController,
                       maxLines: 4,
@@ -1082,6 +1386,21 @@ class _ClinicalEncounterScreenState
                           : null,
                     ),
                     const SizedBox(height: 14),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Rencana Terapi & Edukasi (Plan)',
+                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                        ),
+                        TextButton.icon(
+                          onPressed: _applyStandardPlanTemplate,
+                          icon: const Icon(Icons.flash_on, size: 16),
+                          label: const Text('Gunakan Template Standar', style: TextStyle(fontSize: 12)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
                     TextFormField(
                       controller: _planController,
                       maxLines: 3,

@@ -305,6 +305,8 @@ class _InpatientAdmissionDialogState
                                 return;
                               }
 
+                              final messenger = ScaffoldMessenger.of(context);
+                              final navigator = Navigator.of(context);
                               setState(() => _isLoading = true);
 
                               final res = await ref
@@ -321,10 +323,10 @@ class _InpatientAdmissionDialogState
 
                               if (mounted) {
                                 setState(() => _isLoading = false);
-                                Navigator.of(context).pop();
+                                navigator.pop();
 
                                 if (res != null) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  messenger.showSnackBar(
                                     SnackBar(
                                       content: Text(
                                         'Admisi Berhasil: ${_selectedPatient!.name} ditempatkan di ${_selectedBed!.roomName} (${_selectedBed!.bedNumber}).',

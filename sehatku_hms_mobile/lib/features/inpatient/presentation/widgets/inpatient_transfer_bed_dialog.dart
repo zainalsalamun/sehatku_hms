@@ -193,7 +193,8 @@ class _InpatientTransferBedDialogState
                       onPressed: _isLoading
                           ? null
                           : () async {
-                              if (!_formKey.currentState!.validate()) return;
+                              final messenger = ScaffoldMessenger.of(context);
+                              final navigator = Navigator.of(context);
                               setState(() => _isLoading = true);
 
                               final res = await ref
@@ -206,10 +207,10 @@ class _InpatientTransferBedDialogState
 
                               if (mounted) {
                                 setState(() => _isLoading = false);
-                                Navigator.of(context).pop();
+                                navigator.pop();
 
                                 if (res != null) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  messenger.showSnackBar(
                                     SnackBar(
                                       content: Text(
                                         'Pasien ${admission.patientName} berhasil dipindahkan ke ${_selectedNewBed!.roomName} (${_selectedNewBed!.bedNumber}).',
