@@ -612,6 +612,25 @@ model LabOrderItem {
   @@map("lab_order_items")
 }
 
+model AppointmentConfig {
+  id           String   @id @default(uuid())
+  hospitalId   String?  @map("hospital_id")
+  timeSlots    String[] @map("time_slots")
+  quickReasons String[] @map("quick_reasons")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
 
+  @@map("appointment_configs")
+}
 
+model PharmacyConfig {
+  id         String   @id @default(uuid())
+  hospitalId String?  @map("hospital_id")
+  categories String[]
+  forms      String[]
+  units      String[]
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
 
+  @@map("pharmacy_configs")
+}

@@ -21,6 +21,18 @@ export class AppointmentsController {
     return this.appointmentsService.findAll(query, status, patientId);
   }
 
+  @Get('config')
+  @ApiOperation({ summary: 'Mendapatkan konfigurasi slot waktu dan opsi keluhan appointment' })
+  getAppointmentConfig() {
+    return this.appointmentsService.getAppointmentConfig();
+  }
+
+  @Patch('config')
+  @ApiOperation({ summary: 'Memperbarui konfigurasi slot waktu dan opsi keluhan appointment' })
+  updateAppointmentConfig(@Body() dto: { timeSlots?: string[]; quickReasons?: string[] }) {
+    return this.appointmentsService.updateAppointmentConfig(dto);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Mendapatkan detail appointment berdasarkan ID' })
   findOne(@Param('id') id: string) {

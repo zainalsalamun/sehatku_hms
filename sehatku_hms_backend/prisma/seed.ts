@@ -4,7 +4,7 @@ import * as bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Starting Comprehensive SehatKu HMS Database Seeding (Standard UUID v4)...');
+  console.log('[INFO] Starting Comprehensive SehatKu HMS Database Seeding (Standard UUID v4)...');
 
   // 1. Hospital
   const hospital = await prisma.hospital.upsert({
@@ -816,7 +816,84 @@ async function main() {
     });
   }
 
-  console.log('✅ Comprehensive SehatKu HMS Database Seeding (Standard UUID v4) Completed Successfully!');
+  // 17. Appointment Slot & Quick Reason Config
+  const timeSlots = [
+    '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
+    '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30',
+    '18:30', '19:00', '19:30', '20:00',
+  ];
+  const quickReasons = [
+    'Konsultasi Rutin',
+    'Demam & Flu',
+    'Nyeri Dada & Sesak',
+    'Pemeriksaan Gigi',
+    'Kontrol Pasca Obat',
+    'Pusing / Sakit Kepala',
+    'Medical Checkup',
+  ];
+
+  const existingConfig = await prisma.appointmentConfig.findFirst();
+  if (!existingConfig) {
+    await prisma.appointmentConfig.create({
+      data: {
+        id: '99000000-0000-4000-8000-000000000001',
+        hospitalId: hospital.id,
+        timeSlots,
+        quickReasons,
+      },
+    });
+  }
+
+  // 18. Pharmacy Master Config (Categories, Forms, Units)
+  const pharmacyCategories = [
+    'Analgesik & Antipiretik',
+    'Antibiotik',
+    'Antihipertensi',
+    'Antasida & Saluran Cerna',
+    'Antihistamin / Alergi',
+    'Suplemen & Vitamin',
+    'Obat Luar / Topikal',
+    'Obat Batuk & Flu',
+    'Kardiologi & Jantung',
+    'Lainnya',
+  ];
+  const pharmacyForms = [
+    'Tablet',
+    'Kaplet',
+    'Kapsul',
+    'Sirup / Suspensi',
+    'Salep / Krim / Gel',
+    'Tetes Mata / Telinga',
+    'Injeksi / Ampul',
+    'Larutan Infus',
+  ];
+  const pharmacyUnits = [
+    'strip (10 tab)',
+    'strip (10 kap)',
+    'botol (60 ml)',
+    'botol (100 ml)',
+    'tube (10 gr)',
+    'tube (15 gr)',
+    'ampul',
+    'vial',
+    'sachet',
+    'box',
+  ];
+
+  const existingPharmConfig = await (prisma as any).pharmacyConfig.findFirst();
+  if (!existingPharmConfig) {
+    await (prisma as any).pharmacyConfig.create({
+      data: {
+        id: '99000000-0000-4000-8000-000000000002',
+        hospitalId: hospital.id,
+        categories: pharmacyCategories,
+        forms: pharmacyForms,
+        units: pharmacyUnits,
+      },
+    });
+  }
+
+  console.log('SehatKu HMS Database Seeding (Standard UUID v4) Completed Successfully!');
 }
 
 main()

@@ -36,6 +36,11 @@ export class CreateAppointmentDto {
   @IsString()
   @IsOptional()
   reason?: string;
+
+  @ApiPropertyOptional({ example: '2026-10-08', description: 'Tanggal Janji Temu (YYYY-MM-DD)' })
+  @IsString()
+  @IsOptional()
+  appointmentDate?: string;
 }
 
 export class CancelAppointmentDto {

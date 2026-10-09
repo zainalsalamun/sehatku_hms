@@ -231,8 +231,8 @@ export class AnalyticsService {
       orderBy: { createdAt: 'desc' },
     });
 
-    // Fallback: If strict date range returns 0 but invoices exist without filter, fetch all if no specific start/end was constrained or if today has no transactions yet
-    if (invoices.length === 0 && (!startDate || !endDate)) {
+    // Fallback: If date range returns 0 rows, fetch all available invoices so report is never blank
+    if (invoices.length === 0) {
       invoices = await this.prisma.invoice.findMany({
         include: {
           patient: true,
@@ -271,46 +271,63 @@ export class AnalyticsService {
     let totalLunas = 0;
     let totalPending = 0;
 
-    invoices.forEach((inv, index) => {
-      const amount = Number(inv.amount);
-      if (inv.status === 'Lunas') totalLunas += amount;
-      else totalPending += amount;
-
-      const dateStr = inv.createdAt
-        ? new Date(inv.createdAt).toLocaleString('id-ID', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-          })
-        : '-';
-
-      const paidStr = inv.paidAt
-        ? new Date(inv.paidAt).toLocaleString('id-ID', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-          })
-        : '-';
-
+    if (invoices.length === 0) {
       rows.push([
-        (index + 1).toString(),
-        inv.invoiceNumber,
-        dateStr,
-        inv.patient?.medicalRecordNumber || 'MRN-2026-001',
-        inv.patientName || inv.patient?.name || 'Pasien',
-        inv.patient?.insuranceProvider || 'Umum / Pribadi',
-        inv.serviceName || 'Layanan Medis',
-        inv.doctorName || '-',
-        inv.paymentMethod || 'Tunai',
-        amount.toLocaleString('id-ID'),
-        inv.status,
-        paidStr,
+        '-',
+        'Belum Ada Transaksi',
+        '-',
+        '-',
+        '-',
+        '-',
+        '-',
+        '-',
+        '-',
+        '0',
+        'Draft',
+        '-',
       ]);
-    });
+    } else {
+      invoices.forEach((inv, index) => {
+        const amount = Number(inv.amount);
+        if (inv.status === 'Lunas') totalLunas += amount;
+        else totalPending += amount;
+
+        const dateStr = inv.createdAt
+          ? new Date(inv.createdAt).toLocaleString('id-ID', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+            })
+          : '-';
+
+        const paidStr = inv.paidAt
+          ? new Date(inv.paidAt).toLocaleString('id-ID', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+            })
+          : '-';
+
+        rows.push([
+          (index + 1).toString(),
+          inv.invoiceNumber,
+          dateStr,
+          inv.patient?.medicalRecordNumber || 'MRN-2026-001',
+          inv.patientName || inv.patient?.name || 'Pasien',
+          inv.patient?.insuranceProvider || 'Umum / Pribadi',
+          inv.serviceName || 'Layanan Medis',
+          inv.doctorName || '-',
+          inv.paymentMethod || 'Tunai',
+          amount.toString(),
+          inv.status,
+          paidStr,
+        ]);
+      });
+    }
 
     const lunasCount = invoices.filter((i) => i.status === 'Lunas').length;
     const pendingCount = invoices.filter((i) => i.status === 'Menunggu' || i.status === 'Draft').length;
@@ -410,8 +427,8 @@ export class AnalyticsService {
         item.stock.toString(),
         item.minStock.toString(),
         item.status === 'normal' ? 'AMAN' : item.status === 'low' ? 'MENIPIS' : 'KRITIS',
-        item.price.toLocaleString('id-ID'),
-        itemTotal.toLocaleString('id-ID'),
+        item.price.toString(),
+        itemTotal.toString(),
         item.expirationDate,
       ]);
     });
@@ -450,7 +467,8 @@ export class AnalyticsService {
       orderBy: { appointmentDate: 'desc' },
     });
 
-    if (appointments.length === 0 && (!startDate || !endDate)) {
+    // Fallback: If filtered range returns 0 rows, fetch all appointments
+    if (appointments.length === 0) {
       appointments = await this.prisma.appointment.findMany({
         include: {
           patient: true,
@@ -482,30 +500,47 @@ export class AnalyticsService {
       ],
     ];
 
-    appointments.forEach((app, index) => {
-      const appDateStr = app.appointmentDate
-        ? new Date(app.appointmentDate).toLocaleDateString('id-ID', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-          })
-        : app.dateLabel;
-
+    if (appointments.length === 0) {
       rows.push([
-        (index + 1).toString(),
-        app.queueNumber,
-        appDateStr,
-        app.appointmentTime,
-        app.patient?.medicalRecordNumber || 'MRN-2026-001',
-        app.patient?.name || '-',
-        app.patient?.gender || '-',
-        app.patient?.insuranceProvider || 'Umum / Mandiri',
-        app.departmentName,
-        app.doctor?.name || '-',
-        app.reason || '-',
-        app.status,
+        '-',
+        '-',
+        'Belum Ada Kunjungan',
+        '-',
+        '-',
+        '-',
+        '-',
+        '-',
+        '-',
+        '-',
+        '-',
+        'Menunggu',
       ]);
-    });
+    } else {
+      appointments.forEach((app, index) => {
+        const appDateStr = app.appointmentDate
+          ? new Date(app.appointmentDate).toLocaleDateString('id-ID', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+            })
+          : app.dateLabel;
+
+        rows.push([
+          (index + 1).toString(),
+          app.queueNumber,
+          appDateStr,
+          app.appointmentTime,
+          app.patient?.medicalRecordNumber || 'MRN-2026-001',
+          app.patient?.name || '-',
+          app.patient?.gender || '-',
+          app.patient?.insuranceProvider || 'Umum / Mandiri',
+          app.departmentName,
+          app.doctor?.name || '-',
+          app.reason || '-',
+          app.status,
+        ]);
+      });
+    }
 
     const selesaiCount = appointments.filter((a) => a.status === 'Selesai').length;
     const menungguCount = appointments.filter((a) => a.status === 'Menunggu' || a.status === 'Checked-in').length;
@@ -521,22 +556,159 @@ export class AnalyticsService {
     return this.buildCsvString(rows);
   }
 
-  // ===================== PRIVATE CSV BUILDER (RFC 4180 + UTF-8 BOM) =====================
+  async exportInpatientCensusCsv(startDate?: string, endDate?: string): Promise<string> {
+    const where: any = {};
+    if (startDate || endDate) {
+      where.admissionDate = {};
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        where.admissionDate.gte = start;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        where.admissionDate.lte = end;
+      }
+    }
+
+    let admissions = await this.prisma.inpatientAdmission.findMany({
+      where,
+      include: {
+        patient: true,
+        doctor: true,
+        bed: true,
+      },
+      orderBy: { admissionDate: 'desc' },
+    });
+
+    if (admissions.length === 0) {
+      admissions = await this.prisma.inpatientAdmission.findMany({
+        include: {
+          patient: true,
+          doctor: true,
+          bed: true,
+        },
+        orderBy: { admissionDate: 'desc' },
+      });
+    }
+
+    const allBeds = await this.prisma.roomBed.findMany();
+    const totalBeds = allBeds.length || 1;
+    const occupiedBeds = allBeds.filter((b) => b.status === 'occupied').length;
+    const borPercentage = ((occupiedBeds / totalBeds) * 100).toFixed(1);
+
+    const activeAdmissions = admissions.filter((a) => a.status === 'active');
+    const dischargedAdmissions = admissions.filter((a) => a.status === 'discharged');
+
+    const rows: string[][] = [];
+
+    // Header Metadata
+    rows.push(['KLINIK PRATAMA SEHATKU MEDIKA']);
+    rows.push(['LAPORAN SENSUS HARIAN RAWAT INAP & INDIKATOR BOR (KARS)']);
+    rows.push(['Periode Laporan', startDate && endDate ? `${startDate} s/d ${endDate}` : 'Semua Periode']);
+    rows.push(['Waktu Export Data', new Date().toLocaleString('id-ID')]);
+    rows.push([]);
+
+    // Table Header
+    rows.push([
+      'No',
+      'No. Admisi',
+      'No. RM (MRN)',
+      'Nama Pasien',
+      'Jenis Kelamin',
+      'Penjamin',
+      'DPJP (Dokter)',
+      'Ruang & Bed',
+      'Kelas',
+      'Tgl Masuk (MRS)',
+      'Tgl Keluar (KRS)',
+      'Hari Rawat (LOS)',
+      'Status Admisi',
+      'Kondisi Keluar',
+      'Diagnosa Masuk',
+      'Diagnosa Akhir',
+      'Biaya Kamar (Rp)',
+    ]);
+
+    let totalHariRawat = 0;
+    let totalBiayaKamar = 0;
+
+    admissions.forEach((a, idx) => {
+      const start = new Date(a.admissionDate);
+      const end = a.dischargeDate ? new Date(a.dischargeDate) : new Date();
+      const diffDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+      const dailyRate = Number(a.bed?.dailyRate || 0);
+      const cost = diffDays * dailyRate;
+
+      totalHariRawat += diffDays;
+      totalBiayaKamar += cost;
+
+      rows.push([
+        (idx + 1).toString(),
+        a.admissionNumber,
+        a.patient?.medicalRecordNumber || '-',
+        a.patient?.name || '-',
+        a.patient?.gender === 'L' ? 'Laki-laki' : 'Perempuan',
+        a.patient?.insuranceProvider || 'Umum',
+        a.doctor?.name || '-',
+        `${a.bed?.roomName || '-'} (${a.bed?.bedNumber || '-'})`,
+        a.bed?.classType || '-',
+        new Date(a.admissionDate).toLocaleDateString('id-ID'),
+        a.dischargeDate ? new Date(a.dischargeDate).toLocaleDateString('id-ID') : 'Masih Dirawat',
+        `${diffDays} Hari`,
+        a.status === 'active' ? 'Aktif Dirawat' : 'Sudah Pulang (Discharged)',
+        a.dischargeCondition || '-',
+        a.initialDiagnosis || '-',
+        a.dischargeDiagnosis || '-',
+        cost.toString(),
+      ]);
+    });
+
+    const alos = admissions.length > 0 ? (totalHariRawat / admissions.length).toFixed(1) : '0';
+
+    rows.push([]);
+    rows.push(['RINGKASAN INDIKATOR EFISIENSI RAWAT INAP (KARS):']);
+    rows.push(['Total Kapasitas Tempat Tidur (Kapasitas Bed)', `${totalBeds} Bed`]);
+    rows.push(['Tempat Tidur Terisi Pasien Saat Ini', `${occupiedBeds} Bed`]);
+    rows.push(['Bed Occupancy Rate (BOR)', `${borPercentage}%`]);
+    rows.push(['Rata-rata Lama Rawat Pasien (ALOS)', `${alos} Hari`]);
+    rows.push(['Total Pasien Aktif Dirawat', `${activeAdmissions.length} Pasien`]);
+    rows.push(['Total Pasien Telah Selesai Rawat (KRS)', `${dischargedAdmissions.length} Pasien`]);
+    rows.push(['Total Hari Perawatan (HP Akumulatif)', `${totalHariRawat} Hari Rawat`]);
+    rows.push(['Total Estimasi Omzet Biaya Kamar', `Rp ${totalBiayaKamar.toLocaleString('id-ID')}`]);
+
+    return this.buildCsvString(rows);
+  }
+
+  // ===================== PRIVATE CSV BUILDER (RFC 4180 + UTF-8 BOM + UNIFORM GRID) =====================
 
   private buildCsvString(rows: string[][]): string {
     const BOM = '\uFEFF'; // Byte Order Mark for Excel UTF-8 compatibility
+    const maxCols = rows.reduce((max, r) => Math.max(max, r.length), 0);
+
     const csvBody = rows
-      .map((row) =>
-        row
+      .map((row) => {
+        const paddedRow = [...row];
+        while (paddedRow.length < maxCols) {
+          paddedRow.push('');
+        }
+        return paddedRow
           .map((cell) => {
             const str = cell !== undefined && cell !== null ? String(cell) : '';
-            if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes(';') || str.includes('\r')) {
+            if (
+              str.includes(',') ||
+              str.includes('"') ||
+              str.includes('\n') ||
+              str.includes(';') ||
+              str.includes('\r')
+            ) {
               return `"${str.replace(/"/g, '""')}"`;
             }
             return str;
           })
-          .join(','),
-      )
+          .join(',');
+      })
       .join('\r\n');
 
     return BOM + csvBody;

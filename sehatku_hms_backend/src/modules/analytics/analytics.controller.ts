@@ -83,4 +83,20 @@ export class AnalyticsController {
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     return res.status(200).send(csvData);
   }
+
+  @Get('export/inpatient-census')
+  @ApiOperation({ summary: 'Export Laporan Sensus Harian Rawat Inap & BOR ke file CSV / Excel' })
+  @ApiQuery({ name: 'startDate', required: false, type: String })
+  @ApiQuery({ name: 'endDate', required: false, type: String })
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  async exportInpatientCensus(
+    @Res() res: Response,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    const csvData = await this.analyticsService.exportInpatientCensusCsv(startDate, endDate);
+    const filename = `Laporan_Sensus_Rawat_Inap_${new Date().toISOString().slice(0, 10)}.csv`;
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.status(200).send(csvData);
+  }
 }

@@ -2,11 +2,16 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { json, urlencoded } from 'express';
 import { join } from 'path';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Configure larger payload limit for base64 photo/avatar uploads
+  app.use(json({ limit: '20mb' }));
+  app.use(urlencoded({ extended: true, limit: '20mb' }));
 
   // 1. Robust CORS for Flutter Web & Mobile dev (must be registered FIRST)
   app.enableCors({
@@ -61,7 +66,7 @@ async function bootstrap() {
 
   const port = process.env.PORT || 3000;
   await app.listen(port);
-  console.log(`🚀 SehatKu HMS Backend running at: http://localhost:${port}/api/v1`);
-  console.log(`📑 OpenAPI / Swagger Docs at: http://localhost:${port}/api/docs`);
+  console.log(`[INFO] SehatKu HMS Backend running at: http://localhost:${port}/api/v1`);
+  console.log(`[INFO] OpenAPI / Swagger Docs at: http://localhost:${port}/api/docs`);
 }
 bootstrap();
