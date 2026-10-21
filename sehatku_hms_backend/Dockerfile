@@ -40,6 +40,7 @@ RUN npm ci --only=production && npx prisma generate
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/data ./data
 
 # Expose backend port
 EXPOSE 3000
