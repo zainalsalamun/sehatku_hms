@@ -16,8 +16,27 @@ abstract final class AppColors {
   // Background & Surface
   static const background = Color(0xFFF5F8FA);
   static const surface = Colors.white;
+  static const surfaceSubtle = Color(0xFFF1F5F8);
   static const cardBackground = Colors.white;
   static const cardBorder = Color(0xFFE4EBEF);
+  static const divider = Color(0xFFE6ECEF);
+
+  // Sidebar & Shell Tokens (Clean Clinical Light)
+  static const sidebarBg = Colors.white;
+  static const sidebarBorder = Color(0xFFE6ECEF);
+  static const sidebarActiveBg = Color(0xFFE8F4F5);
+  static const sidebarActiveBorder = Color(0xFFB8E0E3);
+  static const topBarBg = Colors.white;
+
+  // Triage Standard Colors (IGD / ERM)
+  static const triageRed = Color(0xFFDC2626);
+  static const triageRedLight = Color(0xFFFEF2F2);
+  static const triageYellow = Color(0xFFD97706);
+  static const triageYellowLight = Color(0xFFFFFBEB);
+  static const triageGreen = Color(0xFF16A34A);
+  static const triageGreenLight = Color(0xFFF0FDF4);
+  static const triageBlack = Color(0xFF1E293B);
+  static const triageBlackLight = Color(0xFFF1F5F9);
 
   // Text Colors
   static const textPrimary = Color(0xFF123047);
